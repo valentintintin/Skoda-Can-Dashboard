@@ -72,7 +72,7 @@ void main() {
     if (serialLogIndex < serialLogCount) {
       var frame = serialLog[serialLogIndex++];
       streamController.add(frame);
-      debugPrint(frame.toString());
+      //debugPrint(frame.toString());
     } else {
       serialLogIndex = 0;
     }
@@ -202,23 +202,14 @@ class RawSerialPage extends StatefulWidget {
 class _RawSerialPageState extends State<RawSerialPage> {
   StreamSubscription? serialListening;
 
-  TextEditingController txt = new TextEditingController();
-
-  void addString(String string) {
-    if (txt.text.length >= 20000) {
-      txt.text = '';
-    }
-
-    txt.text = string + '\n' + txt.text;
-
-    setState(() {});
-  }
+  Map<String, CanFrame> frames = new Map();
 
   @override
   void initState() {
     super.initState();
     serialListening = streamSerial!.listen((event) {
-      addString(event.toString());
+      frames[event.canId] = event;
+      setState(() {});
     });
   }
 
@@ -230,7 +221,13 @@ class _RawSerialPageState extends State<RawSerialPage> {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(controller: txt, expands: true, minLines: null, maxLines: null, readOnly: true);
+    List<MapEntry<String, CanFrame>> framesSorted = frames.entries.toList();
+    framesSorted.sort((a, b) => a.key.compareTo(b.key));
+
+    return ListView(
+        padding: const EdgeInsets.all(8),
+        children: framesSorted.map((entry) => Text(entry.value.toString())).toList()
+    );
   }
 }
 
@@ -259,7 +256,7 @@ class _BoolWidgetState extends State<BoolWidget> {
   void initState() {
     super.initState();
     serialListening = streamSerial?.listen((event) {
-      if (event.id == dbc.canId) {
+      if (event.canId == dbc.canId) {
         value = signal.getValueFromBitesAsBoolean(event.bits);
         setState(() {});
       }
@@ -280,13 +277,13 @@ class _BoolWidgetState extends State<BoolWidget> {
       stateWidget = Icon(
         Icons.bolt,
         color: Colors.green,
-        size: 30.0,
+        size: 60.0,
       );
     } else {
       stateWidget = Icon(
         Icons.power_settings_new,
         color: Colors.red,
-        size: 30.0,
+        size: 60.0,
       );
     }
 
@@ -294,7 +291,7 @@ class _BoolWidgetState extends State<BoolWidget> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget> [
           Text(signal.name + ' [' + signal.name + ' [' + dbc.name + ' 0x' + dbc.canId + ']', style: TextStyle(
-              fontSize: 20.0,fontWeight: FontWeight.bold)),
+              fontSize: 17.0,fontWeight: FontWeight.bold)),
           stateWidget
         ]
     );
@@ -326,7 +323,7 @@ class _StringWidgetState extends State<StringWidget> {
   void initState() {
     super.initState();
     serialListening = streamSerial?.listen((event) {
-      if (event.id == dbc.canId) {
+      if (event.canId == dbc.canId) {
         value = signal.getValueFromBitesAsString(event.bits);
         setState(() {});
       }
@@ -345,9 +342,9 @@ class _StringWidgetState extends State<StringWidget> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget> [
           Text(signal.name + ' [' + dbc.name + ' 0x' + dbc.canId + ']', style: TextStyle(
-              fontSize: 20.0,fontWeight: FontWeight.bold)),
+              fontSize: 17.0,fontWeight: FontWeight.bold)),
           Text(value, style: TextStyle(
-              fontSize: 20.0,fontWeight: FontWeight.bold)),
+              fontSize: 17.0,fontWeight: FontWeight.bold)),
         ]
     );
   }
@@ -378,7 +375,7 @@ class _AsciiWidgetState extends State<AsciiWidget> {
   void initState() {
     super.initState();
     serialListening = streamSerial?.listen((event) {
-      if (event.id == dbc.canId) {
+      if (event.canId == dbc.canId) {
         if (value.length >= 40) {
           value = '';
         }
@@ -401,9 +398,9 @@ class _AsciiWidgetState extends State<AsciiWidget> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget> [
           Text(signal.name + ' ASCII [' + dbc.name + ' 0x' + dbc.canId + ']', style: TextStyle(
-              fontSize: 20.0,fontWeight: FontWeight.bold, color: Colors.orange)),
+              fontSize: 17.0,fontWeight: FontWeight.bold, color: Colors.orange)),
           Text(value, style: TextStyle(
-              fontSize: 20.0,fontWeight: FontWeight.bold, color: Colors.orange)),
+              fontSize: 17.0,fontWeight: FontWeight.bold, color: Colors.orange)),
         ]
     );
   }
@@ -432,7 +429,7 @@ class _StringAsciiWidgetState extends State<StringAsciiWidget> {
   void initState() {
     super.initState();
     serialListening = streamSerial?.listen((event) {
-      if (event.id == dbc.canId) {
+      if (event.canId == dbc.canId) {
         if (value.length >= 150) {
           value = '';
         }
@@ -455,9 +452,9 @@ class _StringAsciiWidgetState extends State<StringAsciiWidget> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget> [
           Text('ASCII [' + dbc.name + ' 0x' + dbc.canId + ']', style: TextStyle(
-              fontSize: 20.0,fontWeight: FontWeight.bold, color: Colors.green)),
+              fontSize: 17.0,fontWeight: FontWeight.bold, color: Colors.green)),
           Text(value, style: TextStyle(
-              fontSize: 20.0,fontWeight: FontWeight.bold, color: Colors.green)),
+              fontSize: 17.0,fontWeight: FontWeight.bold, color: Colors.green)),
         ]
     );
   }
@@ -487,7 +484,7 @@ class _GaugeWidgetState extends State<GaugeWidget> {
   void initState() {
     super.initState();
     serialListening = streamSerial?.listen((event) {
-      if (event.id == dbc.canId) {
+      if (event.canId == dbc.canId) {
         value = signal.getValueFromBites(event.bits);
         setState(() {});
       }
@@ -508,7 +505,7 @@ class _GaugeWidgetState extends State<GaugeWidget> {
 
     return SfRadialGauge(
       title:GaugeTitle(text: signal.name + ' [' + dbc.name + ' 0x' + dbc.canId + ']', textStyle: TextStyle(
-        fontSize: 20.0,fontWeight: FontWeight.bold)
+        fontSize: 17.0,fontWeight: FontWeight.bold)
       ),
       backgroundColor: signal.comment == 'long' ? Colors.black38 : signal.comment == 'byte' ? Colors.cyan : Colors.white,
       axes: <RadialAxis>[
@@ -522,8 +519,8 @@ class _GaugeWidgetState extends State<GaugeWidget> {
                 knobStyle: KnobStyle(knobRadius: 1, sizeUnit: GaugeSizeUnit.logicalPixel))
           ],
           annotations: <GaugeAnnotation>[
-            GaugeAnnotation(angle: 0, positionFactor: 0, widget: Text(value.toString() + (signal.postfixMetric != null ? ' ' + signal.postfixMetric! : ''), style:
-                TextStyle(fontWeight: FontWeight.bold, fontSize: 20),))
+            GaugeAnnotation(angle: 0, positionFactor: 0, widget: Text(value.toStringAsFixed(2) + (signal.postfixMetric != null ? ' ' + signal.postfixMetric! : ''), style:
+                TextStyle(fontWeight: FontWeight.bold, fontSize: 15),))
           ],
         ),
     ]);
@@ -535,13 +532,13 @@ class CanFrame {
   Uint8List bytes = Uint8List(8);
   BitArray bits = BitArray(8 * 8);
 
-  String id = '';
+  String canId = '';
 
   CanFrame(this.rawFrame) {
     List<String> split = rawFrame.split(',');
 
     if (split.length >= 12) {
-      id = split[1].toUpperCase().replaceAll('0X', '').padLeft(8, '0');
+      canId = split[1].toUpperCase().replaceAll('0X', '').padLeft(8, '0');
 
       bytes = Uint8List.fromList([
         int.parse(split[6],radix: 16),
@@ -564,6 +561,6 @@ class CanFrame {
   }
 
   String bytesToAsciiString() {
-    return bytes.map((e) => String.fromCharCode(e)).join('');
+    return bytes.where((e) => e >= 32 && e <= 128).map((e) => String.fromCharCode(e)).join('');
   }
 }
