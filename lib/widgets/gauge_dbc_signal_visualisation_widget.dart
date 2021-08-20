@@ -51,7 +51,7 @@ class _GaugeDbcSignalVisualisationWidgetState extends State<GaugeDbcSignalVisual
     List<GaugeRange>? states = dbcSignal.states?.map((state) => GaugeRange(startValue: state.value.toDouble(), endValue: state.value.toDouble(), color:Colors.grey, label: state.state,)).toList();
 
     return SfRadialGauge(
-        title:GaugeTitle(text: dbcSignal.name + ' [' + dbc.name + ' 0x' + dbc.canId + ']', textStyle: TextStyle(
+        title:GaugeTitle(text: dbcSignal.name + '\n[' + dbc.name + ' 0x' + dbc.canId + ']', textStyle: TextStyle(
             fontSize: 17.0,fontWeight: FontWeight.bold)
         ),
         backgroundColor: dbcSignal.comment == 'long' ? Colors.black38 : dbcSignal.comment == 'byte' ? Colors.cyan : Colors.white,

@@ -64,7 +64,7 @@ class _BooleanDbcSignalVisualisationWidgetState extends State<BooleanDbcSignalVi
     return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget> [
-          Text(dbcSignal.name + ' [' + dbcSignal.name + ' [' + dbc.name + ' 0x' + dbc.canId + ']', style: TextStyle(
+          Text(dbcSignal.name + '\n[' + dbcSignal.name + '\n[' + dbc.name + ' 0x' + dbc.canId + ']', style: TextStyle(
               fontSize: 17.0,fontWeight: FontWeight.bold)),
           stateWidget
         ]

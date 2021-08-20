@@ -52,7 +52,7 @@ class _AsciiDbcSignalVisualisationWidgetState extends State<AsciiDbcSignalVisual
     return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget> [
-          Text(dbcSignal.name + ' ASCII [' + dbc.name + ' 0x' + dbc.canId + ']', style: TextStyle(
+          Text(dbcSignal.name + ' ASCII\n[' + dbc.name + ' 0x' + dbc.canId + ']', style: TextStyle(
               fontSize: 17.0,fontWeight: FontWeight.bold, color: Colors.orange)),
           Text(value, style: TextStyle(
               fontSize: 17.0,fontWeight: FontWeight.bold, color: Colors.orange)),

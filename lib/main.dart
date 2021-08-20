@@ -16,8 +16,10 @@ import 'model/dbc_signal.dart';
 /*
  0x3EB : BIT 0 (checksum ?) / BIT 1 / BIT 2
  0x5E9 : BIT 5 ? 1 ?
-
+ 0x3DC : BIT 3 ? LONG 1 ?
  0x31B : BIT 2 & 3 = LONG 1
+ 0x3DA : BIT 4 ?
+ 0x3EA : BIT 5 ? BIT 6 ? LONG 2 ?
  */
 
 List<Dbc> dbcs = List<Dbc>.empty(growable: true);
@@ -83,7 +85,8 @@ class MyApp extends StatelessWidget {
 
     Timer.periodic(new Duration(milliseconds: 1), (timer) {
       if (serialLogIndex < serialLogCount) {
-        var frame = serialLog[serialLogIndex++];
+        CanFrame frame = serialLog[serialLogIndex++];
+        frame.date = DateTime.now();
         streamController.add(frame);
         //debugPrint(frame.toString());
       } else {
@@ -102,21 +105,25 @@ class MyApp extends StatelessWidget {
           primarySwatch: Colors.blue,
         ),
         home: DefaultTabController(
-            length: 4,
+            length: 5,
             child: Scaffold(
               appBar: AppBar(
                 bottom: const TabBar(
                   tabs: [
-                    Tab(icon: Icon(Icons.dashboard, size: 17,), text: 'Dashboard',),
-                    Tab(icon: Icon(Icons.directions_car, size: 17,), text: 'All',),
-                    Tab(icon: Icon(Icons.terrain_sharp, size: 17,), text: 'Try',),
-                    Tab(icon: Icon(Icons.sync_alt, size: 17,), text: 'Raw Serial data',),
+                    Tab(icon: Icon(Icons.help, size: 17,), text: 'Help',),
+                    Tab(icon: Icon(Icons.dashboard, size: 17,), text: 'Future Dashboard',),
+                    Tab(icon: Icon(Icons.directions_car, size: 17,), text: 'All DBC',),
+                    Tab(icon: Icon(Icons.terrain_sharp, size: 17,), text: 'Not in DBC',),
+                    Tab(icon: Icon(Icons.sync_alt, size: 17,), text: 'Raw Serial sniffing data',),
                   ],
                 ),
                 title: const Text('Skoda CAN Dashboard'),
               ),
               body: TabBarView(
                 children: [
+                  Center(
+                    child: Text('For the moment, this app is not connected to any car.\nThere is only one dump of few seconds played in loop to analyse it !', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30),),
+                  ),
                   DataPage(onlyChosen: true,),
                   DataPage(),
                   DataPage(onlyTry: true,),

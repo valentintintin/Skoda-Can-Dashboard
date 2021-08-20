@@ -5,26 +5,26 @@ import 'package:skoda_can_dashboard/main.dart';
 import 'package:skoda_can_dashboard/model/dbc.dart';
 import 'package:skoda_can_dashboard/model/dbc_signal.dart';
 
-class StringAsciiDbcSignalVisualisationWidget extends StatefulWidget {
+class StringDbcSignalVisualisationWidget extends StatefulWidget {
   final Dbc dbc;
   final DbcSignal dbcSignal;
 
-  const StringAsciiDbcSignalVisualisationWidget({ Key? key, required this.dbc, required this.dbcSignal })
+  const StringDbcSignalVisualisationWidget({ Key? key, required this.dbc, required this.dbcSignal })
       : super(key: key);
 
   @override
-  _StringAsciiDbcSignalVisualisationWidgetState createState() => _StringAsciiDbcSignalVisualisationWidgetState(dbc, dbcSignal);
+  _StringDbcSignalVisualisationWidgetState createState() => _StringDbcSignalVisualisationWidgetState(dbc, dbcSignal);
 }
 
-class _StringAsciiDbcSignalVisualisationWidgetState extends State<StringAsciiDbcSignalVisualisationWidget> {
+class _StringDbcSignalVisualisationWidgetState extends State<StringDbcSignalVisualisationWidget> {
   StreamSubscription? serialListening;
 
   final Dbc dbc;
   final DbcSignal dbcSignal;
 
-  String value = '';
+  String value = '0';
 
-  _StringAsciiDbcSignalVisualisationWidgetState(this.dbc, this.dbcSignal);
+  _StringDbcSignalVisualisationWidgetState(this.dbc, this.dbcSignal);
 
   @override
   void initState() {
@@ -48,9 +48,9 @@ class _StringAsciiDbcSignalVisualisationWidgetState extends State<StringAsciiDbc
     return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget> [
-          Text(dbcSignal.name + ' [' + dbc.name + ' 0x' + dbc.canId + ']', style: TextStyle(
+          Text(dbcSignal.name + '\n[' + dbc.name + ' 0x' + dbc.canId + ']', style: TextStyle(
               fontSize: 17.0,fontWeight: FontWeight.bold)),
-          Text(value, style: TextStyle(
+          Text(value + (dbcSignal.postfixMetric != null ? ' ' + dbcSignal.postfixMetric! : ''), style: TextStyle(
               fontSize: 17.0,fontWeight: FontWeight.bold)),
         ]
     );

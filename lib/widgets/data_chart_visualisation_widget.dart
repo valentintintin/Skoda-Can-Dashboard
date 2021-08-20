@@ -36,7 +36,7 @@ class _ChartDbcSignalVisualisationWidgetState extends State<ChartDbcSignalVisual
           values.clear();
         }
 
-        values.add(new _ChartData(DateTime.now().millisecondsSinceEpoch, dbcSignal.getValueFromBites(event.bits)));
+        values.add(new _ChartData(event.date.millisecondsSinceEpoch, dbcSignal.getValueFromBites(event.bits)));
         setState(() {});
       }
     });
@@ -55,10 +55,10 @@ class _ChartDbcSignalVisualisationWidgetState extends State<ChartDbcSignalVisual
 
     return SfCartesianChart(
       plotAreaBorderWidth: 0,
-      title: ChartTitle(text: dbcSignal.name + ' [' + dbc.name + ' 0x' + dbc.canId + ']', textStyle: TextStyle(
+      title: ChartTitle(text: dbcSignal.name + '\n[' + dbc.name + ' 0x' + dbc.canId + ']', textStyle: TextStyle(
           fontSize: 17.0,fontWeight: FontWeight.bold)
       ),
-      backgroundColor: dbcSignal.comment == 'long' ? Colors.black38 : dbcSignal.comment == 'byte' ? Colors.cyan : Colors.white,
+      backgroundColor: dbcSignal.comment == 'long' ? Colors.purpleAccent : dbcSignal.comment == 'byte' ? Colors.amberAccent : Colors.white,
       legend: Legend(
         isVisible: false,
         overflowMode: LegendItemOverflowMode.wrap),
