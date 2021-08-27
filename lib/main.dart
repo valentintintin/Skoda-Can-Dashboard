@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -8,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:skoda_can_dashboard/model/dbc.dart';
 import 'package:skoda_can_dashboard/widgets/pages/data_page_widget.dart';
 import 'package:skoda_can_dashboard/widgets/pages/raw_serial_page_widget.dart';
+import 'package:flutter_libserialport/flutter_libserialport.dart';
 
 import 'model/can_frame.dart';
 import 'model/dbc.dart';
@@ -73,8 +73,10 @@ class MyApp extends StatelessWidget {
     dbcs.forEach((dbc) {
       dbc.signals.sort((a, b) => a.name.compareTo(b.name));
     });
+  }
 
-    serialLog = (await getStringFromBytes('assets/canbus.csv')).split("\n").map((e) {
+  Future<void> simulateLogs() async {
+    serialLog = (await getStringFromBytes('assets/canbus.csv')).split('\n').map((e) {
       try {
         return CanFrame(e.trim());
       } catch(e) {
@@ -98,6 +100,40 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     computeFiles();
+    //simulateLogs();
+
+    final port = SerialPort('/dev/ttyUSB0');
+    if (!port.openRead()) {
+      print(SerialPort.lastError);
+    }
+    var config = port.config;
+    config.baudRate = 115200;
+    port.config = config;
+
+    final reader = SerialPortReader(port);
+
+    String buffer = '';
+
+    reader.stream.listen((data) {
+      String dataString = data.map((e) => String.fromCharCode(e)).join('');
+      List<String> lines = (buffer + dataString).split('\n').map((e) => e.trim()).toList();
+
+      buffer = '';
+
+      lines.forEach((line) {
+        if (line.endsWith(',')) {
+          try {
+            CanFrame frame = new CanFrame(line);
+            frame.date = DateTime.now();
+            streamController.add(frame);
+          } catch (e) {
+            // ignored
+          }
+        } else {
+          buffer += line;
+        }
+      });
+    });
 
     return MaterialApp(
         title: 'Skoda CAN Dashboard',
