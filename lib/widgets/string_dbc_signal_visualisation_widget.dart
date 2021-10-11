@@ -29,7 +29,7 @@ class _StringDbcSignalVisualisationWidgetState extends State<StringDbcSignalVisu
   @override
   void initState() {
     super.initState();
-    serialListening = streamSerial?.listen((event) {
+    serialListening = streamSerial.listen((event) {
       if (event.canId == dbc.canId) {
         value = dbcSignal.getValueFromBitesAsString(event.bits);
         setState(() {});
@@ -48,7 +48,7 @@ class _StringDbcSignalVisualisationWidgetState extends State<StringDbcSignalVisu
     return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget> [
-          Text(dbcSignal.name + '\n[' + dbc.name + ' 0x' + dbc.canId + ']', style: TextStyle(
+          Text(dbcSignal.name + '\n[' + dbc.name + ' 0x' + dbc.canId.toRadixString(16).padLeft(8, '0').toUpperCase() + ']', style: TextStyle(
               fontSize: 17.0,fontWeight: FontWeight.bold)),
           Text(value + (dbcSignal.postfixMetric != null ? ' ' + dbcSignal.postfixMetric! : ''), style: TextStyle(
               fontSize: 17.0,fontWeight: FontWeight.bold)),

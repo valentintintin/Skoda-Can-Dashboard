@@ -1,0 +1,1 @@
+flutter build bundle && rsync -a --info=progress2 ./build/flutter_assets/ pi@192.168.1.36:/mnt/Data/skoda && ssh pi@192.168.1.36 /home/pi/start.sh

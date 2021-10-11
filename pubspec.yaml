@@ -29,10 +29,8 @@ dependencies:
   bit_array: any
   flutter_libserialport:
     git: https://github.com/p30arena/flutter_libserialport
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
+  flutter_svg: ^0.22.0
+  intl: ^0.17.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -77,3 +75,5 @@ flutter:
   # see https://flutter.dev/custom-fonts/#from-packages
   assets:
     - assets/
+    - assets/icons/
+    - assets/images/

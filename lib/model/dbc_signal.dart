@@ -1,22 +1,23 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:bit_array/bit_array.dart';
+import 'package:skoda_can_dashboard/model/signal.dart';
 
-import 'dbc_signal_state.dart';
+import 'signal_state.dart';
 
-class DbcSignal {
+class DbcSignal extends Signal {
   DbcSignal({
     required this.name,
     required this.label,
-    required this.startBit,
-    required this.bitLength,
-    required this.isLittleEndian,
-    required this.isSigned,
-    required this.factor,
-    required this.offset,
+    required startBit,
+    required bitLength,
+    required isLittleEndian,
+    required isSigned,
+    required double? factor,
+    required double? offset,
     required this.min,
     required this.max,
+    required this.states,
     required this.dataType,
     required this.choking,
     required this.visibility,
@@ -27,20 +28,20 @@ class DbcSignal {
     required this.problems,
     required this.sourceUnit,
     required this.postfixMetric,
-    required this.states,
-  });
+  }) : super(startBit, bitLength,
+      isLittleEndian: isLittleEndian,
+      isSigned: isSigned,
+      factor: factor,
+      offset: offset,
+  );
 
   final String name;
   final String label;
-  final int startBit;
-  final int bitLength;
-  final bool isLittleEndian;
-  final bool isSigned;
-  final double factor;
-  final double offset;
+  final String dataType;
   final double min;
   final double max;
-  final String dataType;
+  final String? sourceUnit;
+  final String? postfixMetric;
   final bool choking;
   final bool visibility;
   final int interval;
@@ -48,9 +49,7 @@ class DbcSignal {
   final String? comment;
   final int lineInDbc;
   final List<String> problems;
-  final String? sourceUnit;
-  final String? postfixMetric;
-  final List<DbcSignalState>? states;
+  final List<SignalState>? states;
 
   factory DbcSignal.fromRawJson(String str) => DbcSignal.fromJson(json.decode(str));
 
@@ -77,7 +76,7 @@ class DbcSignal {
     problems: List<String>.from(json["problems"].map((x) => x)),
     sourceUnit: json["sourceUnit"] == null ? null : json["sourceUnit"],
     postfixMetric: json["postfixMetric"] == null ? null : json["postfixMetric"],
-    states: json["states"] == null ? null : List<DbcSignalState>.from(json["states"].map((x) => DbcSignalState.fromJson(x))),
+    states: json["states"] == null ? null : List<SignalState>.from(json["states"].map((x) => SignalState.fromJson(x))),
   );
 
   Map<String, dynamic> toJson() => {
@@ -103,11 +102,9 @@ class DbcSignal {
     "postfixMetric": postfixMetric == null ? null : postfixMetric,
     "states": states == null ? null : List<dynamic>.from(states!.map((x) => x.toJson())),
   };
-
-  bool getValueFromBitesAsBoolean(BitArray bits) => getValueFromBites(bits) == 1;
-
+  
   String getValueFromBitesAsString(BitArray bits) {
-    double value = getValueFromBites(bits);
+    double value = asDouble(bits);
 
     try {
       return states!.firstWhere((element) => element.value == value).state;
@@ -115,58 +112,12 @@ class DbcSignal {
       return value.toStringAsFixed(2);
     }
   }
-
-  String getValueFromBitesAsAscii(BitArray bits) {
-    return String.fromCharCode(getValueFromBites(bits).toInt());
-  }
-
-  double getValueFromBites(BitArray bits) {
-    var endian = isLittleEndian ? Endian.little : Endian.big;
-    int endBit = startBit + bitLength;
-
-    BitArray subBits = BitArray(bitLength);
-
-    int j = 0;
-    for (var i = 0; i < bits.length; i++) {
-      if (i >= startBit && i < endBit) {
-        subBits[j++] = bits[i];
-      }
-    }
-
-    var sublist = subBits.byteBuffer.asByteData();
-
-    double value = 0;
-
-    if (bitLength <= 8) {
-      if (isSigned) {
-        value = sublist.getInt8(0).toDouble();
-      } else {
-        value = sublist.getUint8(0).toDouble();
-      }
-    } else if (bitLength <= 8 * 2) {
-      if (isSigned) {
-        value = sublist.getInt16(0, endian).toDouble();
-      } else {
-        value = sublist.getUint16(0, endian).toDouble();
-      }
-    } else if (bitLength <= 8 * 3) {
-      if (isSigned) {
-        value = sublist.getInt32(0, endian).toDouble();
-      } else {
-        value = sublist.getUint32(0, endian).toDouble();
-      }
-    } else if (bitLength <= 8 * 4) {
-      if (isSigned) {
-        value = sublist.getInt64(0, endian).toDouble();
-      } else {
-        value = sublist.getUint64(0, endian).toDouble();
-      }
-    }
-
-    return (value * (factor != 0 ? factor : 1)) + (offset != 0 ? offset : 0);
-  }
-
+  
   bool isInterestingSignal() {
     return !name.toLowerCase().contains('counter') && !name.toLowerCase().endsWith('bz') && !name.toLowerCase().contains('crc') && !name.toLowerCase().contains('checksum');
   }
+}
+
+enum SignalType {
+  int,
 }

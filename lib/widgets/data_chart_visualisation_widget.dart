@@ -30,13 +30,13 @@ class _ChartDbcSignalVisualisationWidgetState extends State<ChartDbcSignalVisual
   @override
   void initState() {
     super.initState();
-    serialListening = streamSerial?.listen((event) {
+    serialListening = streamSerial.listen((event) {
       if (event.canId == dbc.canId) {
         if (values.length >= 500) {
           values.clear();
         }
 
-        values.add(new _ChartData(event.date.millisecondsSinceEpoch, dbcSignal.getValueFromBites(event.bits)));
+        values.add(new _ChartData(event.dateTimeReceived.millisecondsSinceEpoch, dbcSignal.asDouble(event.bits)));
         setState(() {});
       }
     });
@@ -55,7 +55,7 @@ class _ChartDbcSignalVisualisationWidgetState extends State<ChartDbcSignalVisual
 
     return SfCartesianChart(
       plotAreaBorderWidth: 0,
-      title: ChartTitle(text: dbcSignal.name + '\n[' + dbc.name + ' 0x' + dbc.canId + ']', textStyle: TextStyle(
+      title: ChartTitle(text: dbcSignal.name + '\n[' + dbc.name + ' 0x' + dbc.canId.toRadixString(16).padLeft(8, '0').toUpperCase() + ']', textStyle: TextStyle(
           fontSize: 17.0,fontWeight: FontWeight.bold)
       ),
       backgroundColor: dbcSignal.comment == 'long' ? Colors.purpleAccent : dbcSignal.comment == 'byte' ? Colors.amberAccent : Colors.white,

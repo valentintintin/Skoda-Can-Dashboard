@@ -13,25 +13,35 @@ class RawSerialPage extends StatefulWidget {
 class _RawSerialPageState extends State<RawSerialPage> {
   StreamSubscription? serialListening;
 
-  Map<String, CanFrame> frames = new Map();
-  Map<String, List<ByteChange>> framesBytesChange = new Map();
+  DateTime? dateLastFrameReceived;
+  Map<int, CanFrame> frames = new Map();
+  Map<int, List<ByteChange>> framesBytesChange = new Map();
 
   @override
   void initState() {
     super.initState();
-    serialListening = streamSerial!.listen((event) {
+    serialListening = streamSerial.asBroadcastStream().listen((event) {
+      dateLastFrameReceived = event.dateTimeReceived;
+
       if (frames[event.canId] != null) {
         framesBytesChange[event.canId] = event.bytes.asMap().entries.map((element) {
           return computeByteChange(event, element.key, element.value);
         }).toList();
       }
+      // TODO : look for all IDs and not only the received one
       frames[event.canId] = event;
       setState(() {});
     });
   }
 
   ByteChange computeByteChange(CanFrame canFrame, int byteIndex, int byteValue) {
-    ByteChange? lastChange = framesBytesChange[canFrame.canId]?.elementAt(byteIndex);
+    ByteChange? lastChange;
+
+    try {
+      lastChange = framesBytesChange[canFrame.canId]?.elementAt(byteIndex);
+    } catch (e) {
+      // ignored
+    }
 
     if (lastChange != null) {
       if (lastChange.value != byteValue) {
@@ -47,6 +57,17 @@ class _RawSerialPageState extends State<RawSerialPage> {
 
     return ByteChange(FrameByteState.NORMAL, byteValue);
   }
+  
+  String millisecondsToStringFromNow(DateTime dateTime) {
+    int milliseconds = (DateTime.now().millisecondsSinceEpoch - dateTime.millisecondsSinceEpoch);
+    
+    if (milliseconds >= 1000) {
+      double seconds = milliseconds / 1000;
+      return seconds.toStringAsFixed(2) + 's';
+    }
+    
+    return milliseconds.toString() + 'ms';
+  }
 
   @override
   void dispose() {
@@ -56,10 +77,18 @@ class _RawSerialPageState extends State<RawSerialPage> {
 
   @override
   Widget build(BuildContext context) {
-    List<MapEntry<String, CanFrame>> framesSorted = frames.entries.toList();
+    List<MapEntry<int, CanFrame>> framesSorted = frames.entries.toList();
     framesSorted.sort((a, b) => a.key.compareTo(b.key));
 
     List<Widget> allFramesRows = List.empty(growable: true);
+
+    allFramesRows.add(new Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget> [
+            new Text('Last frame received at : ' + (dateLastFrameReceived != null ? dateLastFrameReceived.toString() : 'never'), style: TextStyle(fontSize: 17.0,fontWeight: FontWeight.bold))
+        ]
+    ));
 
     allFramesRows.add(new Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -120,10 +149,13 @@ class _RawSerialPageState extends State<RawSerialPage> {
 
       firstRow.add(new SizedBox(
           width: 200,
-          child: new Text(entry.key.toUpperCase() + (dbc != null ? '\n[' + dbc.name + ']' : '') + '\n' + (DateTime.now().millisecondsSinceEpoch - entry.value.date.millisecondsSinceEpoch).toString() + 'ms', style: TextStyle(fontWeight: FontWeight.bold),)
+          child: new Text('0x' + entry.key.toRadixString(16).toUpperCase().padLeft(8, '0') + (dbc != null ? '\n[' + dbc.name + ']' : '') + '\n' + millisecondsToStringFromNow(entry.value.dateTimeReceived), style: TextStyle(fontWeight: FontWeight.bold),)
       ));
 
+      int maxColumn = 8;
       firstRow.addAll(entry.value.bytesToString().asMap().entries.map((element) {
+        maxColumn--;
+
         ByteChange byteChange = computeByteChange(entry.value, element.key, entry.value.bytes[element.key]);
 
         ByteChange? lastChange = framesBytesChange[entry.key]?.elementAt(element.key);
@@ -135,14 +167,20 @@ class _RawSerialPageState extends State<RawSerialPage> {
 
         return new SizedBox(
           width: 70,
-          child: new Text(element.value + '\n' + (DateTime.now().millisecondsSinceEpoch - byteChange.date.millisecondsSinceEpoch).toString() + 'ms',
+          child: new Text(element.value + '\n' + millisecondsToStringFromNow(byteChange.date),
             style: TextStyle(
-                backgroundColor: byteChange.state == FrameByteState.CHANGED ? Colors.red : Colors.white,
+                backgroundColor: byteChange.state == FrameByteState.CHANGED ? Colors.red : Colors.transparent,
                 color: byteChange.state == FrameByteState.CHANGED ? Colors.white : byteChange.state == FrameByteState.OLD ? Colors.grey : Colors.black
             ),
           )
-      );
+        );
       }));
+
+      while(maxColumn-- > 0) {
+        firstRow.add(new SizedBox(
+            width: 70
+        ));
+      }
 
       firstRow.add(new SizedBox(
           width: 80,

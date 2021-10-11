@@ -14,7 +14,7 @@ class Dbc {
     required this.signals,
   });
 
-  final String canId;
+  final int canId;
   final int pgn;
   final String name;
   final String label;
@@ -28,7 +28,7 @@ class Dbc {
   String toRawJson() => json.encode(toJson());
 
   factory Dbc.fromJson(Map<String, dynamic> json) => Dbc(
-    canId: (json["canId"].toRadixString(16) as String).padLeft(8, '0').toUpperCase(),
+    canId: json["canId"],
     pgn: json["pgn"],
     name: json["name"],
     label: json["label"],
@@ -48,4 +48,8 @@ class Dbc {
     "comment": comment,
     "signals": List<dynamic>.from(signals.map((x) => x.toJson())),
   };
+
+  DbcSignal getSignalByName(String name) {
+    return signals.firstWhere((element) => element.name == name);
+  }
 }

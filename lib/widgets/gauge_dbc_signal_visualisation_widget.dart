@@ -30,9 +30,9 @@ class _GaugeDbcSignalVisualisationWidgetState extends State<GaugeDbcSignalVisual
   @override
   void initState() {
     super.initState();
-    serialListening = streamSerial?.listen((event) {
+    serialListening = streamSerial.listen((event) {
       if (event.canId == dbc.canId) {
-        value = dbcSignal.getValueFromBites(event.bits);
+        value = dbcSignal.asDouble(event.bits);
         setState(() {});
       }
     });
@@ -51,7 +51,7 @@ class _GaugeDbcSignalVisualisationWidgetState extends State<GaugeDbcSignalVisual
     List<GaugeRange>? states = dbcSignal.states?.map((state) => GaugeRange(startValue: state.value.toDouble(), endValue: state.value.toDouble(), color:Colors.grey, label: state.state,)).toList();
 
     return SfRadialGauge(
-        title:GaugeTitle(text: dbcSignal.name + '\n[' + dbc.name + ' 0x' + dbc.canId + ']', textStyle: TextStyle(
+        title:GaugeTitle(text: dbcSignal.name + '\n[' + dbc.name + ' 0x' + dbc.canId.toRadixString(16).padLeft(8, '0').toUpperCase() + ']', textStyle: TextStyle(
             fontSize: 17.0,fontWeight: FontWeight.bold)
         ),
         backgroundColor: dbcSignal.comment == 'long' ? Colors.black38 : dbcSignal.comment == 'byte' ? Colors.cyan : Colors.white,
