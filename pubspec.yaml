@@ -31,6 +31,7 @@ dependencies:
     git: https://github.com/p30arena/flutter_libserialport
   flutter_svg: ^0.22.0
   intl: ^0.17.0
+  flutter_dotenv: ^5.0.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -77,3 +78,4 @@ flutter:
     - assets/
     - assets/icons/
     - assets/images/
+    - .env

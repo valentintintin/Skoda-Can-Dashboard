@@ -6,16 +6,16 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+import 'package:skoda_can_dashboard/model/can_frame.dart';
 import 'package:skoda_can_dashboard/model/dbc.dart';
+import 'package:skoda_can_dashboard/model/dbc_signal.dart';
+import 'package:skoda_can_dashboard/model/exceptions/frame_exception.dart';
+import 'package:skoda_can_dashboard/model/frames/diagnosis_01_frame.dart';
 import 'package:skoda_can_dashboard/widgets/pages/dashboard_page.dart';
 import 'package:skoda_can_dashboard/widgets/pages/raw_serial_page_widget.dart';
-
-import 'model/can_frame.dart';
-import 'model/dbc.dart';
-import 'model/dbc_signal.dart';
-import 'model/exceptions/frame_exception.dart';
-import 'model/frames/diagnosis_01_frame.dart';
-import 'widgets/utils.dart';
+import 'package:skoda_can_dashboard/widgets/utils.dart';
 
 /*
  0x3EB : BIT 0 (checksum ?) / BIT 1 / BIT 2
@@ -26,12 +26,16 @@ import 'widgets/utils.dart';
  0x3EA : BIT 5 ? BIT 6 ? LONG 2 ?
  */
 
-bool useFake = false;
-bool useFilter = false;
-bool saveFrames = false;
-bool useWebcam = false;
-bool setDateTime = false;
-String fakeFile = 'assets/canbus2.csv';
+bool useFake = dotenv.get('useFake') == 'true';
+bool useFilter = dotenv.get('useFilter') == 'true';
+bool saveFrames = dotenv.get('saveFrames') == 'true';
+bool useWebcam = dotenv.get('useWebcam') == 'true';
+bool setDateTime = dotenv.get('setDateTime') == 'true';
+String? fakeFile = dotenv.get('fakeFile');
+List<String> serialPorts = dotenv.get('useSerialPort') == 'true' ? dotenv.get('serialPortDevices').split(',') : List.empty();
+String? ipServer = dotenv.get('useSocket') == 'true' ? dotenv.get('ipServer') : null;
+int? portServer = dotenv.get('useSocket') == 'true' ? int.parse(dotenv.get('portServer')) : null;
+
 List<Dbc> dbcs = List<Dbc>.empty(growable: true);
 List<Dbc> dbcsTried = List<Dbc>.empty(growable: true);
 List<CanFrame?>? serialLog;
@@ -52,9 +56,7 @@ void initSerialPort() {
     throw Exception('No serial port');
   }
 
-  List<String> portsList = List.from(['/dev/ttyACM0', '/dev/ttyACM1', '/dev/ttyUSB0', '/dev/ttyUSB1']);
-
-  for (String portPath in portsList) {
+  for (String portPath in serialPorts) {
     // print('Test serial port : ' + portPath);
     port = SerialPort(portPath);
     if (port!.openReadWrite()) {
@@ -101,7 +103,7 @@ Future<void> initSocket() async {
   // print('Try socket');
 
   // fixme throw exception, how to catch ?
-  socket = await Socket.connect('192.168.4.1', 23, timeout: Duration(seconds: 4));
+  socket = await Socket.connect(ipServer!, portServer!, timeout: Duration(seconds: 4));
 
   try {
     await socket!.done;
@@ -152,22 +154,27 @@ CanFrame transformBytesToCanFrame(Uint8List data) {
 void tryConnect() {
   // print('Try connect');
 
-  try {
-    initSerialPort();
-  } catch (e) {
-    // print('Serial port error : ' + e.toString());
-
+  if (serialPorts.isNotEmpty) {
+    try {
+      initSerialPort();
+      return;
+    } catch (e) {
+      // print('Serial port error : ' + e.toString());    
+    }
+  }
+  
+  if (ipServer != null && portServer != null) {
     try {
       initSocket();
     } catch (e) {
       // print('Telnet error : ' + e.toString());
-
-      // print('No device connected');
     }
   }
 }
 
 Future<void> main() async {
+  await dotenv.load(fileName: '.env');
+  
   streamSerial = streamController.stream;
 
   if (saveFrames) {
@@ -282,7 +289,7 @@ class _MyAppState extends State<MyApp> {
                   Icon(connectionStateIcon),
                   framesPerSeconds > 0 ? TextButton.icon(onPressed: () {}, icon: Icon(Icons.stream), label: Text(framesPerSeconds.toString() + ' FPS', style: TextStyle(color: Colors.white),)) : Container(),
                   Padding(
-                      padding: EdgeInsets.only(left: 24),
+                      padding: EdgeInsets.only(left: 24, right: 24),
                       child: Row(
                           children: <Widget>[
                             IconButton(
@@ -458,7 +465,11 @@ Future<bool> computeFiles() async {
 }
 
 Future<void> simulateLogs() async {
-  serialLog = (await getStringFromAssets(fakeFile)).split('\n').map((rawFrame) {
+  if (fakeFile == null) {
+    return;
+  }
+  
+  serialLog = (await getStringFromAssets(fakeFile!)).split('\n').map((rawFrame) {
     if (rawFrame.length < 10 || rawFrame.startsWith('Time')) {
       return null;
     }
@@ -472,7 +483,7 @@ Future<void> simulateLogs() async {
   }).where((element) => element != null).toList();
   int serialLogCount = serialLog!.length;
 
-  Timer.periodic(new Duration(milliseconds: 5), (timer) {
+  Timer.periodic(new Duration(milliseconds: 10), (timer) {
     if (useFake) {
       if (serialLogIndex >= serialLogCount) {
         serialLogIndex = 0;
@@ -481,8 +492,7 @@ Future<void> simulateLogs() async {
       CanFrame frame = serialLog![serialLogIndex++]!;
 
       int timestamp = frame.timestamp + 500;
-      while (frame.timestamp < timestamp &&
-          serialLogIndex + 1 < serialLogCount) {
+      while (frame.timestamp < timestamp && serialLogIndex + 1 < serialLogCount) {
         // int i = 0;
         // while (i++ < 400 && serialLogIndex + 1 < serialLogCount) {
         frame.dateTimeReceived = DateTime.now();
