@@ -5,6 +5,7 @@ import 'package:skoda_can_dashboard/model/signal_state.dart';
 class Acc02Frame extends CanFrame {
   static const int CAN_ID = 0x30C;
   static const int MAX_SPEED = 200;
+  static const int MAX_DISTANCE = 15;
 
   Signal desiredSpeedSignal = Signal(12, 10, factor: 0.32);
   StatesSignal statusPrimAnzSignal = StatesSignal(22, 2, [
@@ -20,7 +21,7 @@ class Acc02Frame extends CanFrame {
   StatesSignal statusDisplaySignal = StatesSignal(61, 3, [
   ]);
   
-  Acc02Frame(rawFrameOrData) : super(rawFrameOrData, canId: CAN_ID);
+  Acc02Frame(simpleCanFrame) : super(simpleCanFrame);
   
   bool isSpeedEnabled() => statusPrimAnzSignal.asBoolean(bits);
   int desiredSpeed() {

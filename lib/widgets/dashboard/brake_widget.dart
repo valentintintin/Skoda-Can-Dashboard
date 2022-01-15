@@ -1,12 +1,12 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:skoda_can_dashboard/model/can_frame.dart';
+import 'package:skoda_can_dashboard/model/frames/combi_01_frame.dart';
 import 'package:skoda_can_dashboard/model/frames/motor_14_frame.dart';
 import 'package:skoda_can_dashboard/widgets/dashboard/abstract_dashboard_widget.dart';
 
 class BrakeWidget extends AbstractDashboardWidget {
-  BrakeWidget(streamCanFrame) : super([Motor14Frame], streamCanFrame);
+  BrakeWidget(streamCanFrame) : super([Motor14Frame, Combi01Frame], streamCanFrame);
 
   @override
   State<StatefulWidget> createState() {
@@ -15,23 +15,33 @@ class BrakeWidget extends AbstractDashboardWidget {
 }
 
 class _BrakeWidgetState extends AbstractDashboardWidgetState<BrakeWidget> {
-  bool value = false;
+  bool valueBrake = false;
+  bool valueHandBrake = false;
 
-  SvgPicture iconEnabled = SvgPicture.asset('assets/icons/air_pressure.svg', width: 50, height: 50, color: Colors.green);
-  SvgPicture iconDisabled = SvgPicture.asset('assets/icons/air_pressure.svg', width: 50, height: 50, color: Colors.grey.withOpacity(0.5));
+  SvgPicture iconHandBrake = SvgPicture.asset('assets/icons/brakes.svg', width: 50, height: 50, color: Colors.red);
+  SvgPicture iconBrake = SvgPicture.asset('assets/icons/brakes.svg', width: 50, height: 50, color: Colors.orange);
+  SvgPicture iconDisabled = SvgPicture.asset('assets/icons/brakes.svg', width: 50, height: 50, color: Colors.grey.withOpacity(0.5));
   
   @override
   Widget build(BuildContext context) {
-    return value ? iconEnabled : iconDisabled;
+    return valueHandBrake ? iconHandBrake : valueBrake ? iconBrake : iconDisabled;
   }
 
   @override
   void onNewValue(CanFrame frame) {
-    bool newValue = (frame as Motor14Frame).isBraking();
+    bool newValueBrake = valueBrake;
+    bool newValueHandBrake = valueHandBrake;
     
-    if (newValue != value) {
+    if (frame is Motor14Frame) {
+      newValueBrake = frame.isBraking();
+    } else if (frame is Combi01Frame) {
+      newValueHandBrake = frame.isHandbrakeEngaged();
+    }
+    
+    if (newValueBrake != valueBrake || newValueHandBrake != valueHandBrake) {
       setState(() {
-        value = newValue;
+        valueBrake = newValueBrake;
+        valueHandBrake = newValueHandBrake;
       });
     }
   }

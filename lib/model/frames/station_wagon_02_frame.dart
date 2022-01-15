@@ -9,7 +9,7 @@ class StationWagon02Frame extends CanFrame {
   Signal contentTankSignal = Signal(40, 7);
   BooleanSignal kbiFStatusTankSignal = BooleanSignal(47);
 
-  StationWagon02Frame(rawFrameOrData) : super(rawFrameOrData, canId: CAN_ID);
+  StationWagon02Frame(simpleCanFrame) : super(simpleCanFrame);
 
   int kilometer() => kilometerSignal.asInt(bits);
   double temperatureOutside() => outsideTempSignal.asDouble(bits); 

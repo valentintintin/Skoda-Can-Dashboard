@@ -25,10 +25,16 @@ class Signal {
   }
   
   int asInt(BitArray bits) {
-    return asDouble(bits).toInt();
+    return asDouble(bits).round();
   }
 
   double asDouble(BitArray bits) {
+    double value = asDoubleRaw(bits);
+    
+    return (value * ((factor != 0 ? factor : 1) ?? 1)) + ((offset != 0 ? offset : 0) ?? 0);
+  }
+
+  double asDoubleRaw(BitArray bits) {
     var endian = isLittleEndian ? Endian.little : Endian.big;
     int endBit = startBit + bitLength;
 
@@ -71,7 +77,7 @@ class Signal {
       }
     }
 
-    return (value * ((factor != 0 ? factor : 1) ?? 1)) + ((offset != 0 ? offset : 0) ?? 0);
+    return value;
   }
 }
 

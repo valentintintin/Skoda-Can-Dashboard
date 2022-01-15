@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:skoda_can_dashboard/main.dart';
-import 'package:skoda_can_dashboard/widgets/bytes_string_dbc_signal_visualisation_widget.dart';
+import 'package:skoda_can_dashboard/widgets/analyse/bytes_string_dbc_signal_visualisation_widget.dart';
 
-import '../data_boolean_visualisation_widget.dart';
-import '../data_chart_visualisation_widget.dart';
-import '../gauge_dbc_signal_visualisation_widget.dart';
-import '../string_dbc_signal_visualisation_widget.dart';
+import '../analyse/data_boolean_visualisation_widget.dart';
+import '../analyse/data_chart_visualisation_widget.dart';
+import '../analyse/gauge_dbc_signal_visualisation_widget.dart';
+import '../analyse/string_dbc_signal_visualisation_widget.dart';
 
 class DataPage extends StatelessWidget {
   final bool? onlyTry;
@@ -44,8 +44,8 @@ class DataPage extends StatelessWidget {
         }
       });
     } else if (onlyTry == true) {
-      allRows.add(new Text('Here, I try to show every bytes (8 and 16) in different chart and ASCII to see what happens'));
-      
+      allRows.add(Text('Here, I try to show every bytes (8 and 16) in different chart and ASCII to see what happens'));
+
       if (dbcsTried.isNotEmpty == true) {
         dbcsTried.forEach((dbc) {
           allRows.add(new BytesStringDbcSignalVisualisationWidget(dbc: dbc));

@@ -6,7 +6,7 @@ class Gateway72Frame extends CanFrame {
 
   UInt8Signal outsideTempSignal = UInt8Signal(56, offset: -50, factor: 0.5);
 
-  Gateway72Frame(rawFrameOrData) : super(rawFrameOrData, canId: CAN_ID);
+  Gateway72Frame(simpleCanFrame) : super(simpleCanFrame);
   
   double temperatureOutside() => outsideTempSignal.asDouble(bits); 
 }

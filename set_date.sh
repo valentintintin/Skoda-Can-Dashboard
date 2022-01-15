@@ -1,0 +1,1 @@
+sudo date +"%Y-%m-%dT%H:%M:%S" -s $1

@@ -1,5 +1,4 @@
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:skoda_can_dashboard/model/can_frame.dart';
 import 'package:skoda_can_dashboard/model/frames/climate_11_frame.dart';
@@ -22,7 +21,7 @@ class _ClimAcWidgetState extends AbstractDashboardWidgetState<ClimAcWidget> {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
-      children: <Widget> [
+      children: [
         Text(
           value ? 'AC' : '',
           style: TextStyle(

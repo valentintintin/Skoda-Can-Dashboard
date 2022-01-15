@@ -9,7 +9,7 @@ class Esp02Frame extends CanFrame {
   BooleanSignal emergencyBrakeIndicatorSignal = BooleanSignal(55);
   UInt8Signal transverseAccelerationSignal = UInt8Signal(16, factor: 0.01, offset: -1.27);
 
-  Esp02Frame(rawFrameOrData) : super(rawFrameOrData, canId: CAN_ID);
+  Esp02Frame(simpleCanFrame) : super(simpleCanFrame);
   
   double yawRate() => yawRateSignal.asDouble(bits);
   bool isVzYawRate() => vzYawRateSignal.asBoolean(bits);

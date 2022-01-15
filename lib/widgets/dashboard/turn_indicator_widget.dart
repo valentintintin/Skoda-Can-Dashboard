@@ -1,5 +1,4 @@
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:skoda_can_dashboard/model/can_frame.dart';
@@ -40,7 +39,7 @@ class _TurnIndicatorWidgetState extends AbstractDashboardWidgetState<TurnIndicat
 
   @override
   Widget build(BuildContext context) {
-    return (value ? valueOn : valueOff) ?? Container();
+    return (value ? valueOn : valueOff) ?? SizedBox();
   }
 
   @override

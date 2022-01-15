@@ -16,7 +16,7 @@ class ClimatronicFrame extends CanFrame {
     SignalState(value: 219, state: '7'),
   ]);
   
-  ClimatronicFrame(rawFrameOrData) : super(rawFrameOrData, canId: CAN_ID);
+  ClimatronicFrame(simpleCanFrame) : super(simpleCanFrame);
   
   int speed() => speedSignal.asState(bits).asInt();
 }

@@ -30,7 +30,7 @@ class _GaugeDbcSignalVisualisationWidgetState extends State<GaugeDbcSignalVisual
   @override
   void initState() {
     super.initState();
-    serialListening = streamSerial.listen((event) {
+    serialListening = streamFrame.listen((event) {
       if (event.canId == dbc.canId) {
         value = dbcSignal.asDouble(event.bits);
         setState(() {});

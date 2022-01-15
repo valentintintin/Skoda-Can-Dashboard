@@ -7,20 +7,28 @@ class Wba03Frame extends CanFrame {
 
   StatesSignal driveLevelSignal = StatesSignal(12, 4, [
     SignalState(value: 0, state: 'P'),
-    SignalState(value: 1, state: '1'), // To test
-    SignalState(value: 2, state: 'R'), // To test
+    SignalState(value: 1, state: 'P'),
+    SignalState(value: 2, state: 'R'),
     SignalState(value: 3, state: 'N'),
     SignalState(value: 4, state: 'D'),
   ]);
   Signal gearSignal = Signal(24, 4);
   
-  Wba03Frame(rawFrameOrData) : super(rawFrameOrData, canId: CAN_ID);
+  Wba03Frame(simpleCanFrame) : super(simpleCanFrame);
   
   String drivingMode() => 'D';
   String gear() {
     switch(driveLevelSignal.asInt(bits)) {
       case 4:
         return gearSignal.asInt(bits).toString();
+      default:
+        return driveLevelSignal.asString(bits);
+    }
+  }
+  String gearMode() {
+    switch(driveLevelSignal.asInt(bits)) {
+      case 4:
+        return 'D';
       default:
         return driveLevelSignal.asString(bits);
     }

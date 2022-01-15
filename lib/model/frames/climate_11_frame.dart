@@ -6,7 +6,7 @@ class Climate11Frame extends CanFrame {
 
   BooleanSignal acSwitchSignal = BooleanSignal(2);
 
-  Climate11Frame(rawFrameOrData) : super(rawFrameOrData, canId: CAN_ID);
+  Climate11Frame(simpleCanFrame) : super(simpleCanFrame);
   
   bool isAcActivated() => acSwitchSignal.asBoolean(bits);
 }

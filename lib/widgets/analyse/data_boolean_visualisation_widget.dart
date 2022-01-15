@@ -29,7 +29,7 @@ class _BooleanDbcSignalVisualisationWidgetState extends State<BooleanDbcSignalVi
   @override
   void initState() {
     super.initState();
-    serialListening = streamSerial.listen((event) {
+    serialListening = streamFrame.listen((event) {
       if (event.canId == dbc.canId) {
         value = dbcSignal.asBoolean(event.bits);
         setState(() {});
@@ -63,7 +63,7 @@ class _BooleanDbcSignalVisualisationWidgetState extends State<BooleanDbcSignalVi
 
     return Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget> [
+        children: [
           Text(dbcSignal.name + '\n[' + dbcSignal.name + '\n[' + dbc.name + ' 0x' + dbc.canId.toRadixString(16).padLeft(8, '0').toUpperCase() + ']', style: TextStyle(
               fontSize: 17.0,fontWeight: FontWeight.bold)),
           stateWidget

@@ -9,8 +9,7 @@ class Engine04Frame extends CanFrame {
   Signal engineSpeedSignal = Signal(24, 12, factor: 3);
   Signal chargePressureSignal = Signal(39, 9, factor: 0.01);
   
-  Engine04Frame(rawFrameOrData) : super(rawFrameOrData, canId: CAN_ID);
-  Engine04Frame.fromSavvyCan(Uint8List data) : super(data);
+  Engine04Frame(simpleCanFrame) : super(simpleCanFrame);
   
   int engineSpeed() => engineSpeedSignal.asInt(bits);
   double chargePressure() => chargePressureSignal.asDouble(bits);

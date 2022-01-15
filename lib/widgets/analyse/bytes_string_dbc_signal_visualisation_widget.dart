@@ -26,7 +26,7 @@ class _BytesStringDbcSignalVisualisationWidgetState extends State<BytesStringDbc
   @override
   void initState() {
     super.initState();
-    serialListening = streamSerial.listen((event) {
+    serialListening = streamFrame.listen((event) {
       if (event.canId == dbc.canId) {
         if (value.length >= 150) {
           value = '';
@@ -48,7 +48,7 @@ class _BytesStringDbcSignalVisualisationWidgetState extends State<BytesStringDbc
   Widget build(BuildContext context) {
     return Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget> [
+        children: [
           Text('ASCII [' + dbc.name + ' 0x' + dbc.canId.toRadixString(16).padLeft(8, '0').toUpperCase() + ']', style: TextStyle(
               fontSize: 17.0,fontWeight: FontWeight.bold, color: Colors.green)),
           Text(value, style: TextStyle(

@@ -12,7 +12,7 @@ class Diagnosis01Frame extends CanFrame {
   Signal minuteSignal = Signal(49, 6);
   Signal secondSignal = Signal(55, 6);
 
-  Diagnosis01Frame(rawFrameOrData) : super(rawFrameOrData, canId: CAN_ID);
+  Diagnosis01Frame(simpleCanFrame) : super(simpleCanFrame);
   
   int kilometer() => kilometerSignal.asInt(bits);
   DateTime dateTime() => DateTime(

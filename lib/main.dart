@@ -5,17 +5,20 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_libserialport/flutter_libserialport.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-
+import 'package:intl/intl.dart';
+import 'package:skoda_can_dashboard/connections/fake_connection.dart';
+import 'package:skoda_can_dashboard/connections/gvret_serial.dart';
+import 'package:skoda_can_dashboard/connections/gvret_tcp.dart';
 import 'package:skoda_can_dashboard/model/can_frame.dart';
+import 'package:skoda_can_dashboard/model/dashcam_params.dart';
 import 'package:skoda_can_dashboard/model/dbc.dart';
 import 'package:skoda_can_dashboard/model/dbc_signal.dart';
-import 'package:skoda_can_dashboard/model/exceptions/frame_exception.dart';
 import 'package:skoda_can_dashboard/model/frames/diagnosis_01_frame.dart';
-import 'package:skoda_can_dashboard/widgets/pages/dashboard_page.dart';
+import 'package:skoda_can_dashboard/widgets/pages/dashboard_page_widget.dart';
+import 'package:skoda_can_dashboard/widgets/pages/dashcam_page_widget.dart';
 import 'package:skoda_can_dashboard/widgets/pages/raw_serial_page_widget.dart';
-import 'package:skoda_can_dashboard/widgets/utils.dart';
+import 'package:skoda_can_dashboard/utils.dart';
 
 /*
  0x3EB : BIT 0 (checksum ?) / BIT 1 / BIT 2
@@ -23,187 +26,152 @@ import 'package:skoda_can_dashboard/widgets/utils.dart';
  0x3DC : BIT 3 ? LONG 1 ?
  0x31B : BIT 2 & 3 = LONG 1
  0x3DA : BIT 4 ?
- 0x3EA : BIT 5 ? BIT 6 ? LONG 2 ?
+ 0x65A : 0x0 0x0 0x0 0x1 0x0 0x0 0x3C 0x0 : switch Start & Stop
+ 
+ - TODO Wrap des évènements (mode colonne mieux)
+    
+ - TODO Caméra : mettre une balance des blancs/expositions automatiques (et peut-être acheter une autre caméra normale)
+    
+ - TODO Interface Web pour récupérer les vidéos et les dump CAN
+ - TODO Faire fonctionner le WiFi (depuis ESP) pour l'application Android
+ 
+ 
+ - À tester : Enregistrement des vidéos en accéléré malgré les changements au processing
+ - À tester : Kilométrage/litre/RPM/ACC vitesse/ACC activé/Levier de vitesse --> fausses valeures, bug décodage bytes   
  */
 
-bool useFake = dotenv.get('useFake') == 'true';
-bool useFilter = dotenv.get('useFilter') == 'true';
-bool saveFrames = dotenv.get('saveFrames') == 'true';
-bool useWebcam = dotenv.get('useWebcam') == 'true';
-bool setDateTime = dotenv.get('setDateTime') == 'true';
-String? fakeFile = dotenv.get('fakeFile');
-List<String> serialPorts = dotenv.get('useSerialPort') == 'true' ? dotenv.get('serialPortDevices').split(',') : List.empty();
-String? ipServer = dotenv.get('useSocket') == 'true' ? dotenv.get('ipServer') : null;
-int? portServer = dotenv.get('useSocket') == 'true' ? int.parse(dotenv.get('portServer')) : null;
+bool useFake = false;
+bool useFilter = false;
+bool saveFrames = false;
+bool useDashcam = false;
+String? dashcamParamsFile;
+bool recordDashcam = false;
+bool setDateTime = false;
+String? fakeFile = 'assets/canbus.csv';
+List<String> serialPorts = List.empty();
+String? ipServer = null;
+int portServer = 23;
 
 List<Dbc> dbcs = List<Dbc>.empty(growable: true);
 List<Dbc> dbcsTried = List<Dbc>.empty(growable: true);
-List<CanFrame?>? serialLog;
-int serialLogIndex = 0;
 
-SerialPort? port;
-Socket? socket;
+late Stream<CanFrame> streamFrame;
+late Stream<Image> streamPanelImage;
+late Stream<Image> streamDashCamImage;
+StreamController<CanFrame> streamControllerFrame = StreamController<CanFrame>.broadcast();
+StreamController<Image> streamControllerPanelImage = StreamController<Image>.broadcast();
+StreamController<Image> streamControllerDashCamImage = StreamController<Image>.broadcast();
+StreamController<DashcamParams> streamControllerDashCamParams = StreamController<DashcamParams>.broadcast();
 
-late Stream<CanFrame> streamSerial;
-StreamController<CanFrame> streamController = StreamController<CanFrame>.broadcast();
+FakeConnection fakeConnection = FakeConnection(streamControllerFrame);
+GvretSerial gvretSerial = GvretSerial(streamControllerFrame);
+GvretTcp gvretTcp = GvretTcp(streamControllerFrame);
 
-void initSerialPort() {
-  if (port != null) {
-    port!.close();
-  }
+Process? dashcamPythonProgramProcess;
 
-  if (SerialPort.availablePorts.isEmpty) {
-    throw Exception('No serial port');
-  }
+Future<void> initEnv() async {
+  if (Platform.isLinux) {
+    String env = Platform.environment['ENV'] ?? '';
+    String dotEnvFile = '.env' + (env.length > 0 ? '.' + env : '');
+    print('Take dotenv ' + dotEnvFile);
+    await dotenv.load(fileName: dotEnvFile);
 
-  for (String portPath in serialPorts) {
-    // print('Test serial port : ' + portPath);
-    port = SerialPort(portPath);
-    if (port!.openReadWrite()) {
-      // print(portPath + ' OK');
-      break;
-    }
-    // print(SerialPort.lastError!.message);
-    port = null;
-  }
-
-  if (port == null) {
-    throw Exception(SerialPort.lastError!.message);
-  }
-
-  var config = port!.config;
-  config.baudRate = 1000000;
-  port!.config = config;
-
-  port!.write(Uint8List.fromList([0xE7, 0xF1, 0x09]));
-
-  final reader = SerialPortReader(port!);
-
-  reader.stream.listen((data) {
-    if (data[0] != 0xF1 || data[1] != 0) {
-      return;
-    }
-
-    try {
-      transformBytesToCanFrame(data);
-    } catch (e) {
-      // ignored
-    }
-  }, onError: (e) {
-    // print('Serial diconnected : ' + e.toString());
-    port = null;
-  });
-}
-
-Future<void> initSocket() async {
-  if (socket != null) {
-    socket!.close();
-  }
-
-  // print('Try socket');
-
-  // fixme throw exception, how to catch ?
-  socket = await Socket.connect(ipServer!, portServer!, timeout: Duration(seconds: 4));
-
-  try {
-    await socket!.done;
-  }
-  catch(e) {}
-  
-  socket!.add(Uint8List.fromList([0xE7, 0xF1, 0x09]));
-
-  List<int> buffer = List<int>.empty(growable: true);
-
-  socket!.listen((data) {
-    buffer.addAll(data);
-
-    if (buffer[0] != 0xF1 || buffer[1] != 0) {
-      buffer.clear();
-      return;
-    }
-
-    try {
-      transformBytesToCanFrame(Uint8List.fromList(buffer));
-      buffer.clear();
-    } on CanFrameCsvWrongException  {
-      buffer.clear();
-    }  on FrameWrongException {
-      buffer.clear();
-    } catch (e) {
-      if (buffer.length > 12288) {
-        buffer.clear();
-      }
-    }
-  }, onError: (e) {
-    // print('Socket diconnected : ' + e.toString());
-    socket = null;
-  });
-}
-
-CanFrame transformBytesToCanFrame(Uint8List data) {
-  try {
-    CanFrame frame = CanFrame.make(data);
-    streamController.add(frame);
-    return frame;
-  } catch(e, stacktrace) {
-    print("CAN Frame error !\n" + e.toString() + "\n" + stacktrace.toString());
-    throw e;
+    useFake = dotenv.get('useFake') == 'true';
+    useFilter = dotenv.get('useFilter') == 'true';
+    saveFrames = dotenv.get('saveFrames') == 'true';
+    useDashcam = dotenv.get('useDashcam') == 'true';
+    dashcamParamsFile = dotenv.maybeGet('dashcamParamsFile', fallback: 'assets/dashcam_params.json');
+    recordDashcam = dotenv.get('recordDashcam') == 'true';
+    setDateTime = dotenv.get('setDateTime') == 'true';
+    fakeFile = dotenv.maybeGet('fakeFile', fallback: 'assets/canbus.csv');
+    serialPorts = dotenv.get('useSerialPort') == 'true' ? dotenv.get('serialPortDevices').split(',') : serialPorts;
+    ipServer = dotenv.get('useSocket') == 'true' ? dotenv.get('ipServer') : ipServer;
+    portServer = dotenv.get('useSocket') == 'true' ? int.parse(dotenv.get('portServer')) : portServer;
+  } else {
+    print('Platform Android, saveFrames = true and ipServer = 192.168.4.1');
+    
+    saveFrames = true;
+    ipServer = '192.168.4.1';
   }
 }
 
 void tryConnect() {
-  // print('Try connect');
-
-  if (serialPorts.isNotEmpty) {
-    try {
-      initSerialPort();
-      return;
-    } catch (e) {
-      // print('Serial port error : ' + e.toString());    
-    }
+  if (gvretSerial.isConnected() || gvretTcp.isConnected()) {
+    return;
   }
   
-  if (ipServer != null && portServer != null) {
+  if (serialPorts.isNotEmpty) {
     try {
-      initSocket();
+      gvretSerial.init(serialPorts);
+      return;
     } catch (e) {
-      // print('Telnet error : ' + e.toString());
+      print('Serial port error : ' + e.toString());    
+    }
+  }
+
+  if (ipServer != null) {
+    try {
+      gvretTcp.init(ipServer!, portServer);
+    } catch (e) {
+      print('TCP error : ' + e.toString());
     }
   }
 }
 
 Future<void> main() async {
-  await dotenv.load(fileName: '.env');
-  
-  streamSerial = streamController.stream;
+  await initEnv();
+
+  streamFrame = streamControllerFrame.stream;
+  streamPanelImage = streamControllerPanelImage.stream;
+  streamDashCamImage = streamControllerDashCamImage.stream;
+
+  WidgetsFlutterBinding.ensureInitialized();
 
   if (saveFrames) {
-    File fileSave = File(getNewFileName('canbus') + '.csv');
+    String filePathFrames = await getNewFileName('canbus') + '.csv';
+    print('Save frames to : ' + filePathFrames);
+    File fileSave = File(filePathFrames);
 
-    streamSerial.listen((event) {
-      fileSave.writeAsStringSync(event.toCsv(), mode: FileMode.writeOnlyAppend);
+    streamFrame.listen((event) {
+      fileSave.writeAsStringSync(event.toCsv() + '\n', mode: FileMode.writeOnlyAppend);
     });
   }
-  
+
   if (setDateTime) {
-    streamSerial.listen((event) async {
+    print('Set datetime enabled');
+    
+    streamFrame.listen((event) async {
       if (event is Diagnosis01Frame) {
-        if ((DateTime.now().millisecondsSinceEpoch - event.dateTime().millisecondsSinceEpoch).abs() >= 2 * 60 * 1000) {
+        int diffDateSeconds = (DateTime.now().millisecondsSinceEpoch - event.dateTime().millisecondsSinceEpoch).abs();
+        if (diffDateSeconds >= 2 * 60 * 1000) {
           /*
           visudo
-          pi ALL=(ALL) NOPASSWD: /usr/bin/date
+          pi ALL=(ALL) NOPASSWD:ALL
            */
-          await Process.run('date', [
-            '+"%Y-%m-%dT%H:%M:%S"',
-            '-s',
-            event.dateTime().toIso8601String()
-          ]);
+          print('Current date : ' + DateTime.now().toIso8601String() + '    Event date : ' + event.dateTime().toIso8601String() + '   diff seconds : ' + diffDateSeconds.toString());
+          
+          try {
+            await Process.run('./set_date.sh', [
+              event.dateTime().toIso8601String(),
+            ]).then((value) {
+              if (value.stdout != null) {
+                print('Date changed : ' + value.stdout);
+              }
+              
+              if (value.stderr != null && value.stderr.toString().isNotEmpty) {
+                print('Error date changed : ' + value.stderr);
+              }
+            });
+          } catch (e, stacktrace) {
+            print('Error before set date : ' + e.toString() + ' ' +
+                stacktrace.toString());
+          }
         }
       }
     });
   }
 
-  WidgetsFlutterBinding.ensureInitialized();
+  await startDashcamImagesServer();
 
   runApp(FutureBuilder(
     future: computeFiles(),
@@ -212,19 +180,21 @@ Future<void> main() async {
         throw Exception(snap.error.toString() + ' : ' + snap.stackTrace.toString());
       }
       if(snap.hasData) {
-        Timer.periodic(new Duration(seconds: 5), (timer) {
-          if (socket != null) {
-            useFake = false;
-            socket!.add(Uint8List.fromList([0xE7, 0xF1, 0x09]));
-          } else if (port != null) {
-            useFake = false;
-            port!.write(Uint8List.fromList([0xE7, 0xF1, 0x09]));
-          } else {
+        Timer.periodic(new Duration(seconds: 7), (timer) {
+          if (!gvretSerial.isConnected() || !gvretTcp.isConnected()) {
             tryConnect();
+          } else {
+            useFake = false;
           }
         });
 
-        return MyApp();
+        return MaterialApp(
+            title: 'Skoda CAN Dashboard',
+            theme: ThemeData(
+              primarySwatch: Colors.blueGrey,
+            ),
+            home: MyApp()
+        );
       }
       return Center(child: CircularProgressIndicator());
     },
@@ -239,10 +209,20 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   int nbFrames = 0;
   int framesPerSeconds = 0;
+  Widget bodyWidget = DashboardPage();
+  DateTime? dateLastFrameReceived;
+  final DateFormat dateFormatter = DateFormat('Hms');
 
   @override
   void initState() {
     super.initState();
+
+    if (Platform.isAndroid) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeRight,
+        DeviceOrientation.landscapeLeft,
+      ]);
+    }
 
     Timer.periodic(new Duration(seconds: 1), (timer) {
       setState(() {
@@ -251,86 +231,117 @@ class _MyAppState extends State<MyApp> {
       nbFrames = 0;
     });
 
-    streamSerial.asBroadcastStream().listen((frame) {
+    streamFrame.asBroadcastStream().listen((frame) {
+      dateLastFrameReceived = frame.dateTimeReceived;
       nbFrames++;
     });
+  }
+  
+  @override
+  void dispose() {
+    print(dashcamPythonProgramProcess?.toString());
+    dashcamPythonProgramProcess?.kill();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    Image imageSkoda = Image(image: AssetImage('assets/images/skoda.png'),);
-
     IconData connectionStateIcon;
-    if (port != null) {
+    if (gvretSerial.isConnected()) {
       connectionStateIcon = Icons.usb;
-    } else if (socket != null) {
+    } else if (gvretTcp.isConnected()) {
       connectionStateIcon = Icons.network_wifi;
-    } else if (serialLog?.isNotEmpty == true) {
+    } else if (fakeConnection.isConnected()) {
       connectionStateIcon = Icons.pattern;
     } else {
       connectionStateIcon = Icons.mobiledata_off;
     }
 
-    return MaterialApp(
-        title: 'Skoda CAN Dashboard',
-        theme: ThemeData(
-          primarySwatch: Colors.blueGrey,
-        ),
-        home: DefaultTabController(
-            length: 2,
-            child: Scaffold(
-              appBar: AppBar(
-                leading: Padding(
-                    padding: EdgeInsets.all(8),
-                    child: imageSkoda
+    return Scaffold(
+        drawer: Drawer(
+            child: ListView(
+              children: [
+                const DrawerHeader(
+                  decoration: BoxDecoration(
+                    color: Colors.blueGrey,
+                  ),
+                  child: Image(image: AssetImage('assets/images/skoda.png'), width: 120, height: 120,),
                 ),
-                title: Text('Skoda CAN Dashboard'),
-                actions: <Widget>[
-                  Icon(connectionStateIcon),
-                  framesPerSeconds > 0 ? TextButton.icon(onPressed: () {}, icon: Icon(Icons.stream), label: Text(framesPerSeconds.toString() + ' FPS', style: TextStyle(color: Colors.white),)) : Container(),
-                  Padding(
-                      padding: EdgeInsets.only(left: 24, right: 24),
-                      child: Row(
-                          children: <Widget>[
-                            IconButton(
-                              icon: Icon(Icons.close),
-                              onPressed: () {
-                                if (Platform.isAndroid) {
-                                  SystemNavigator.pop();
-                                } else {
-                                  exit(0);
-                                }
-                              },
-                            )
-                          ]
-                      )
-                  )
-                ],
-                bottom: const TabBar(
-                  tabs: [
-                    Tab(icon: Icon(Icons.directions_car)),
-                    // Tab(icon: Icon(Icons.directions_car, size: 17,), text: 'All DBC',),
-                    // Tab(icon: Icon(Icons.dashboard, size: 17,), text: 'Not in DBC',),
-                    Tab(icon: Icon(Icons.find_in_page,)),
-                  ],
+                ListTile(
+                  title: const Text('Dashboard'),
+                  onTap: () {
+                    setState(() {
+                      bodyWidget = DashboardPage();
+                    });
+                    Navigator.pop(context);
+                  },
                 ),
-              ),
-              body: TabBarView(
-                children: [
-                  DashboardPage(),
-                  // DataPage(),
-                  // DataPage(onlyTry: true,),
-                  RawSerialPage(),
-                ],
-              ),
+                ListTile(
+                  title: const Text('Raw Serial'),
+                  onTap: () {
+                    setState(() {
+                      bodyWidget = RawSerialPage();
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  title: const Text('DashCam'),
+                  onTap: () {
+                    setState(() {
+                      bodyWidget = DashcamPage(streamDashCamImage, streamControllerDashCamParams, dashcamParamsFile!);
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  title: const Text('Exit'),
+                  onTap: () {
+                    if (Platform.isAndroid) {
+                      SystemNavigator.pop();
+                    } else {
+                      exit(0);
+                    }
+                  },
+                ),
+              ],
             )
-        )
+        ),
+        appBar: AppBar(
+          title: Text('Skoda CAN Dashboard'),
+          actions: [
+            Icon(connectionStateIcon),
+            framesPerSeconds > 0 ?
+            TextButton.icon(onPressed: () {},
+                icon: Icon(Icons.stream),
+                label: Text(
+                  framesPerSeconds.toString() + ' FPS - Last at : ' + (dateLastFrameReceived != null ? dateFormatter.format(dateLastFrameReceived!) : '-'),
+                  style: TextStyle(color: Colors.white),
+                )
+            )
+                : SizedBox(),
+            Padding(
+                padding: EdgeInsets.only(left: 24, right: 24),
+                child: Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.close),
+                        onPressed: () {
+                          if (Platform.isAndroid) {
+                            SystemNavigator.pop();
+                          } else {
+                            exit(0);
+                          }
+                        },
+                      )
+                    ]
+                )
+            )
+          ],
+        ),
+        body: bodyWidget
     );
   }
-}
-
-Future<String> getStringFromAssets(String assetKey) async {
-  return await rootBundle.loadString(assetKey);
 }
 
 Future<bool> computeFiles() async {
@@ -468,39 +479,62 @@ Future<void> simulateLogs() async {
   if (fakeFile == null) {
     return;
   }
-  
-  serialLog = (await getStringFromAssets(fakeFile!)).split('\n').map((rawFrame) {
-    if (rawFrame.length < 10 || rawFrame.startsWith('Time')) {
-      return null;
-    }
 
-    try {
-      return CanFrame.make(rawFrame.trim());
-    } catch(e, stacktrace) {
-      print("Fake CAN Frame error !\n" + rawFrame + "\n" + e.toString() + "\n" + stacktrace.toString());
-      return null;
-    }
-  }).where((element) => element != null).toList();
-  int serialLogCount = serialLog!.length;
+  await fakeConnection.init(fakeFile!);
+}
 
-  Timer.periodic(new Duration(milliseconds: 10), (timer) {
-    if (useFake) {
-      if (serialLogIndex >= serialLogCount) {
-        serialLogIndex = 0;
-      }
-
-      CanFrame frame = serialLog![serialLogIndex++]!;
-
-      int timestamp = frame.timestamp + 500;
-      while (frame.timestamp < timestamp && serialLogIndex + 1 < serialLogCount) {
-        // int i = 0;
-        // while (i++ < 400 && serialLogIndex + 1 < serialLogCount) {
-        frame.dateTimeReceived = DateTime.now();
-        streamController.add(frame);
-        // debugPrint(frame.toString());
-
-        frame = serialLog![serialLogIndex++]!;
-      }
-    }
+Future<void> startDashcamImagesServer() async {
+  print('Serveur image panel on 38500');
+  Future<ServerSocket> serverPanelImage = ServerSocket.bind('127.0.0.1', 38500);
+  serverPanelImage.then((ServerSocket server) {
+    server.listen((Socket socket) {
+      socket.listen((List<int> data) {
+        streamControllerPanelImage.add(Image.memory(Uint8List.fromList(data), gaplessPlayback: true,));
+      });
+    });
   });
+
+  print('Serveur image on 38501');
+  Future<ServerSocket> serverDashCamImage = ServerSocket.bind('127.0.0.1', 38501);
+  serverDashCamImage.then((ServerSocket server) {
+    server.listen((Socket socket) {
+      streamControllerDashCamParams.stream.listen((params) async {
+        List<int> json = utf8.encode(params.toRawJson());
+        
+        Uint8List length = Uint8List(2);
+        ByteData bytedata = ByteData.view(length.buffer);
+
+        bytedata.setUint8(0, json.length & 0xFF);
+        bytedata.setUint8(1, (json.length & 0xFF00) >> 8);
+
+        List<int> toSend = List.of(length, growable: true);
+        toSend.addAll(json);
+        
+        socket.add(toSend);
+      });
+      
+      socket.listen((List<int> data) {
+        streamControllerDashCamImage.add(Image.memory(Uint8List.fromList(data), gaplessPlayback: true));
+      });
+    });
+  });
+
+  if (useDashcam) {
+    print('Start dashcam/index_cam.py with params ' + (dashcamParamsFile ?? 'null'));
+
+    await Process.run('sudo', ['pkill', 'python3']);
+    
+    try {
+      dashcamPythonProgramProcess = await Process.start(
+          'python3', ['dashcam/index_cam.py', dashcamParamsFile ?? 'params.json', recordDashcam ? '1' : '0'], mode: ProcessStartMode.detachedWithStdio);
+      dashcamPythonProgramProcess!.stderr
+          .transform(utf8.decoder)
+          .forEach((e) {
+        print('Error dashcam python: ' + e);
+      });
+      print('dashcam/index_cam.py started');
+    } catch (e, stacktrace) {
+      print('Error run dashcam python : ' + e.toString() + ' ' + stacktrace.toString());
+    }
+  }
 }

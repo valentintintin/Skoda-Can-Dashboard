@@ -32,7 +32,7 @@ class Combi01Frame extends CanFrame {
   BooleanSignal displayErrorAccSignal = BooleanSignal(60);
   Signal displayErrorSwaSignal = Signal(61, 2); // SWA = Steering Wheel Angle ?
 
-  Combi01Frame(rawFrameOrData) : super(rawFrameOrData, canId: CAN_ID);
+  Combi01Frame(simpleCanFrame) : super(simpleCanFrame);
 
   bool isHandbrakeEngaged() => handbrakeSignal.asBoolean(bits);
   int speed() => speedDigital.asInt(bits);

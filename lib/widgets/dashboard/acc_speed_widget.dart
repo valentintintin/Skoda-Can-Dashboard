@@ -1,5 +1,4 @@
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:skoda_can_dashboard/model/can_frame.dart';
@@ -25,26 +24,32 @@ class _AccSpeedWidgetState extends AbstractDashboardWidgetState<AccSpeedWidget> 
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: <Widget> [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-                "$value Km/h",
-                style: TextStyle(
-                    color: enabled ? Colors.white : Colors.white.withOpacity(0.5),
-                    fontSize: 40,
+    if (value >= 30) {
+      return Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(
+                  "$value Km/h",
+                  style: TextStyle(
+                    color: enabled ? Colors.white : Colors.white.withOpacity(
+                        0.5),
+                    fontSize: 35,
                     fontWeight: enabled ? FontWeight.w400 : FontWeight.w100,
-                )
+                  )
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: enabled ? iconEnabled : iconDisabled,
-          ),
-        ]
-    );
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: enabled ? iconEnabled : iconDisabled,
+            ),
+          ]
+      );
+    }
+    
+    return SizedBox();
   }
 
   @override

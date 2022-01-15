@@ -30,7 +30,7 @@ class _ChartDbcSignalVisualisationWidgetState extends State<ChartDbcSignalVisual
   @override
   void initState() {
     super.initState();
-    serialListening = streamSerial.listen((event) {
+    serialListening = streamFrame.listen((event) {
       if (event.canId == dbc.canId) {
         if (values.length >= 500) {
           values.clear();

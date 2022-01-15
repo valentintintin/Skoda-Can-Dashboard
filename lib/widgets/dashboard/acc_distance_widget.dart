@@ -1,5 +1,4 @@
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:skoda_can_dashboard/model/can_frame.dart';
 import 'package:skoda_can_dashboard/model/frames/acc_02_frame.dart';
@@ -25,35 +24,46 @@ class _AccDistanceWidgetState extends AbstractDashboardWidgetState<AccDistanceWi
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> widgets = new List.filled((Acc02Frame.MAX_SPEED + 2) ~/ 10, SizedBox(width: 25));
-
-    widgets.first = Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: imageSkoda,
-    );
-
     if (hasObject) {
-      widgets[(value + 1) ~/ 2] = Padding(
-        padding: const EdgeInsets.all(8),
-        child: Text(
-            "$value m",
-            style: TextStyle(
-              color: isImportant ? Colors.red : Colors.white,
-              fontSize: 40,
-              fontWeight: FontWeight.w400,
-            )
-        ),
+      List<Widget> widgets = new List.filled(value + 2, SizedBox(width: 35,));
+
+      widgets.first = Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: imageSkoda,
       );
-      widgets[value + 1] = Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: imageTesla,
+
+      if (hasObject) {
+        widgets[value ~/ 2 + 1] = Padding(
+          padding: const EdgeInsets.only(left: 8, right: 8),
+          child: Text(
+              "$value m",
+              style: TextStyle(
+                color: isImportant ? Colors.red : Colors.white,
+                fontSize: 35,
+                fontWeight: FontWeight.w400,
+              )
+          ),
+        );
+        
+        widgets.last = Padding(
+          padding: const EdgeInsets.only(left: 8.0),
+          child: imageTesla,
+        );
+      }
+
+      return Container(
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(width: 1.0, color: Colors.grey)
+          )
+        ),
+        child: Wrap(
+          children: widgets
+        )
       );
     }
-
-    return Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: widgets
-    );
+    
+    return SizedBox();
   }
 
   @override

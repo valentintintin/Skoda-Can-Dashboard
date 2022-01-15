@@ -1,0 +1,1 @@
+./build.sh && ./send.sh $1

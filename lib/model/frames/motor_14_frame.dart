@@ -15,7 +15,7 @@ class Motor14Frame extends CanFrame {
   BooleanSignal driverBrakingSignal = BooleanSignal(28);
   BooleanSignal engineRunningSignal = BooleanSignal(39);
   
-  Motor14Frame(rawFrameOrData) : super(rawFrameOrData, canId: CAN_ID);
+  Motor14Frame(simpleCanFrame) : super(simpleCanFrame);
   
   bool isBraking() => driverBrakingSignal.asBoolean(bits);
   bool isEngineRunning() => engineRunningSignal.asBoolean(bits);

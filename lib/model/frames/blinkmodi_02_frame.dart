@@ -17,7 +17,7 @@ class Blinkmodi02Frame extends CanFrame {
     SignalState(value: 1, state: '50 Hz'),
   ]);
   
-  Blinkmodi02Frame(rawFrameOrData) : super(rawFrameOrData, canId: CAN_ID);
+  Blinkmodi02Frame(simpleCanFrame) : super(simpleCanFrame);
   
   bool isLeftTurnIndicatorActivated() => leftTurnExteriorBulb1Signal.asBoolean(bits) || leftTurnExteriorBulb2Signal.asBoolean(bits); 
   bool isRightTurnIndicatorActivated() => rightTurnExteriorBulb1Signal.asBoolean(bits) || rightTurnExteriorBulb2Signal.asBoolean(bits);

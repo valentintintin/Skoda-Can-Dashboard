@@ -1,5 +1,4 @@
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:skoda_can_dashboard/model/can_frame.dart';
 import 'package:skoda_can_dashboard/model/frames/climatronic_frame.dart';
@@ -27,7 +26,7 @@ class _ClimSpeedWidgetState extends AbstractDashboardWidgetState<ClimSpeedWidget
             fontSize: 30,
             fontWeight: FontWeight.w300
         )
-    ) : Container();
+    ) : SizedBox();
   }
 
   @override

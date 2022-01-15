@@ -1,12 +1,3 @@
-class FrameWrongException implements Exception {
-}
-
-class FrameWrongLengthException implements Exception {
-}
-
-class FrameDataMissingForLengthException implements Exception {
-}
-
 class CanFrameCsvWrongException implements Exception {
   final String rawCanFrame;
 
@@ -18,10 +9,10 @@ class CanFrameCsvWrongException implements Exception {
   }
 }
 
-class CanFrameNoIdException extends CanFrameCsvWrongException {
-  CanFrameNoIdException(String rawCanFrame) : super(rawCanFrame);
+class CanFrameCsvNoIdException extends CanFrameCsvWrongException {
+  CanFrameCsvNoIdException(String rawCanFrame) : super(rawCanFrame);
 }
 
-class CanFrameTooMuchDataException extends CanFrameCsvWrongException {
-  CanFrameTooMuchDataException(String rawCanFrame) : super(rawCanFrame);
+class CanFrameCsvTooMuchDataException extends CanFrameCsvWrongException {
+  CanFrameCsvTooMuchDataException(String rawCanFrame) : super(rawCanFrame);
 }

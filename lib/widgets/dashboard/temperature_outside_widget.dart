@@ -1,5 +1,4 @@
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:skoda_can_dashboard/model/can_frame.dart';
 import 'package:skoda_can_dashboard/model/frames/gateway_72_frame.dart';
@@ -7,7 +6,7 @@ import 'package:skoda_can_dashboard/model/frames/station_wagon_02_frame.dart';
 import 'package:skoda_can_dashboard/widgets/dashboard/abstract_dashboard_widget.dart';
 
 class TemperatureOutsideWidget extends AbstractDashboardWidget {
-  TemperatureOutsideWidget(streamCanFrame) : super([StationWagon02Frame], streamCanFrame);
+  TemperatureOutsideWidget(streamCanFrame) : super([Gateway72Frame], streamCanFrame);
 
   @override
   State<StatefulWidget> createState() {
@@ -22,7 +21,7 @@ class _TemperatureOutsideWidgetState extends AbstractDashboardWidgetState<Temper
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
-      children: <Widget> [
+      children: [
         Text(
           "$value °C EXT",
           style: TextStyle(
@@ -40,7 +39,6 @@ class _TemperatureOutsideWidgetState extends AbstractDashboardWidgetState<Temper
     String newValue = value;
 
     if (frame is Gateway72Frame) {
-      // Gateway72Frame possible but not always the same as StationWagon (sometime 2°C delta)
       newValue = frame.temperatureOutside().toStringAsFixed(1);
     } else if (frame is StationWagon02Frame) {
       newValue = frame.temperatureOutside().toStringAsFixed(1);

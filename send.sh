@@ -1,0 +1,1 @@
+rsync -a --info=progress2 ./build/flutter_assets/ pi@$1:/mnt/Data/skoda

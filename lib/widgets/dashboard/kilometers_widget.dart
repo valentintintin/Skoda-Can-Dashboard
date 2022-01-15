@@ -1,5 +1,4 @@
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:skoda_can_dashboard/model/can_frame.dart';
 import 'package:skoda_can_dashboard/model/frames/diagnosis_01_frame.dart';
@@ -41,7 +40,7 @@ class _KilometersWidgetState extends AbstractDashboardWidgetState<KilometersWidg
       newValue = frame.kilometer();
     }
     
-    if (newValue != value) {
+    if (newValue > value) {
       setState(() {
         value = newValue;
       });

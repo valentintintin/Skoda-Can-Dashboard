@@ -1,5 +1,4 @@
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:skoda_can_dashboard/model/can_frame.dart';
@@ -27,8 +26,8 @@ class _GazoilWidgetState extends AbstractDashboardWidgetState<GazoilWidget> {
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: <Widget> [
+      mainAxisSize: MainAxisSize.min,
+      children: [
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Text(

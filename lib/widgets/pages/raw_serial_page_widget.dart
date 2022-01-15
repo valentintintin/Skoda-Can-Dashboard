@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:skoda_can_dashboard/main.dart';
 import 'package:skoda_can_dashboard/model/can_frame.dart';
 import 'package:skoda_can_dashboard/model/dbc.dart';
+import 'package:syncfusion_flutter_charts/charts.dart';
 
 class RawSerialPage extends StatefulWidget {
   @override
@@ -13,22 +14,22 @@ class RawSerialPage extends StatefulWidget {
 class _RawSerialPageState extends State<RawSerialPage> {
   StreamSubscription? serialListening;
 
-  DateTime? dateLastFrameReceived;
   Map<int, CanFrame> frames = new Map();
+  Map<int, bool> framesChartEnable = new Map();
   Map<int, List<ByteChange>> framesBytesChange = new Map();
 
   @override
   void initState() {
     super.initState();
-    serialListening = streamSerial.asBroadcastStream().listen((event) {
-      dateLastFrameReceived = event.dateTimeReceived;
-
+    serialListening = streamFrame.asBroadcastStream().listen((event) {
       if (frames[event.canId] != null) {
         framesBytesChange[event.canId] = event.bytes.asMap().entries.map((element) {
           return computeByteChange(event, element.key, element.value);
         }).toList();
+      } else {
+        framesChartEnable[event.canId] = false;
       }
-      // TODO : look for all IDs and not only the received one
+      
       frames[event.canId] = event;
       setState(() {});
     });
@@ -45,7 +46,7 @@ class _RawSerialPageState extends State<RawSerialPage> {
 
     if (lastChange != null) {
       if (lastChange.value != byteValue) {
-        return ByteChange(FrameByteState.CHANGED, byteValue);
+        lastChange.change(byteValue);
       } else if (DateTime.now().millisecondsSinceEpoch - lastChange.date.millisecondsSinceEpoch >= 3000) {
         lastChange.state = FrameByteState.OLD;
       } else if (DateTime.now().millisecondsSinceEpoch - lastChange.date.millisecondsSinceEpoch >= 1500) {
@@ -55,17 +56,17 @@ class _RawSerialPageState extends State<RawSerialPage> {
       return lastChange;
     }
 
-    return ByteChange(FrameByteState.NORMAL, byteValue);
+    return ByteChange(byteIndex, FrameByteState.NORMAL, byteValue);
   }
-  
+
   String millisecondsToStringFromNow(DateTime dateTime) {
     int milliseconds = (DateTime.now().millisecondsSinceEpoch - dateTime.millisecondsSinceEpoch);
-    
+
     if (milliseconds >= 1000) {
       double seconds = milliseconds / 1000;
       return seconds.toStringAsFixed(2) + 's';
     }
-    
+
     return milliseconds.toString() + 'ms';
   }
 
@@ -80,147 +81,149 @@ class _RawSerialPageState extends State<RawSerialPage> {
     List<MapEntry<int, CanFrame>> framesSorted = frames.entries.toList();
     framesSorted.sort((a, b) => a.key.compareTo(b.key));
 
-    List<Widget> allFramesRows = List.empty(growable: true);
-
-    allFramesRows.add(new Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget> [
-            new Text('Last frame received at : ' + (dateLastFrameReceived != null ? dateLastFrameReceived.toString() : 'never'), style: TextStyle(fontSize: 17.0,fontWeight: FontWeight.bold))
-        ]
-    ));
-
-    allFramesRows.add(new Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget> [
-          new SizedBox(
-              width: 200,
-              child: new Text('Can ID', style: TextStyle(fontSize: 17.0,fontWeight: FontWeight.bold))
-          ),
-          new SizedBox(
-              width: 70,
-              child: new Text('B0', style: TextStyle(fontSize: 17.0,fontWeight: FontWeight.bold))
-          ),
-          new SizedBox(
-              width: 70,
-              child: new Text('B1', style: TextStyle(fontSize: 17.0,fontWeight: FontWeight.bold))
-          ),
-          new SizedBox(
-              width: 70,
-              child: new Text('B2', style: TextStyle(fontSize: 17.0,fontWeight: FontWeight.bold))
-          ),
-          new SizedBox(
-              width: 70,
-              child: new Text('B3', style: TextStyle(fontSize: 17.0,fontWeight: FontWeight.bold))
-          ),
-          new SizedBox(
-              width: 70,
-              child: new Text('B4', style: TextStyle(fontSize: 17.0,fontWeight: FontWeight.bold))
-          ),
-          new SizedBox(
-              width: 70,
-              child: new Text('B5', style: TextStyle(fontSize: 17.0,fontWeight: FontWeight.bold))
-          ),
-          new SizedBox(
-              width: 70,
-              child: new Text('B6', style: TextStyle(fontSize: 17.0,fontWeight: FontWeight.bold))
-          ),
-          new SizedBox(
-              width: 70,
-              child: new Text('B7', style: TextStyle(fontSize: 17.0,fontWeight: FontWeight.bold))
-          ),
-          new SizedBox(
-              width: 80,
-              child: new Text('ASCII', style: TextStyle(fontSize: 17.0,fontWeight: FontWeight.bold))
-          ),
-        ]
-    ));
-
-    allFramesRows.addAll(framesSorted.map((entry) {
-      List<Widget> allRows = List.empty(growable: true);
-      List<Widget> firstRow = List.empty(growable: true);
-
-      Dbc? dbc;
-
-      try {
-        dbc = dbcs.firstWhere((element) => element.canId == entry.key);
-      } catch(e) {}
-
-      firstRow.add(new SizedBox(
-          width: 200,
-          child: new Text('0x' + entry.key.toRadixString(16).toUpperCase().padLeft(8, '0') + (dbc != null ? '\n[' + dbc.name + ']' : '') + '\n' + millisecondsToStringFromNow(entry.value.dateTimeReceived), style: TextStyle(fontWeight: FontWeight.bold),)
-      ));
-
-      int maxColumn = 8;
-      firstRow.addAll(entry.value.bytesToString().asMap().entries.map((element) {
-        maxColumn--;
-
-        ByteChange byteChange = computeByteChange(entry.value, element.key, entry.value.bytes[element.key]);
-
-        ByteChange? lastChange = framesBytesChange[entry.key]?.elementAt(element.key);
-        if (lastChange != null) {
-          if (lastChange.state != byteChange.state) {
-            framesBytesChange[entry.key]![element.key] = byteChange;
-          }
-        }
-
-        return new SizedBox(
-          width: 70,
-          child: new Text(element.value + '\n' + millisecondsToStringFromNow(byteChange.date),
-            style: TextStyle(
-                backgroundColor: byteChange.state == FrameByteState.CHANGED ? Colors.red : Colors.transparent,
-                color: byteChange.state == FrameByteState.CHANGED ? Colors.white : byteChange.state == FrameByteState.OLD ? Colors.grey : Colors.black
-            ),
-          )
-        );
-      }));
-
-      while(maxColumn-- > 0) {
-        firstRow.add(new SizedBox(
-            width: 70
-        ));
-      }
-
-      firstRow.add(new SizedBox(
-          width: 80,
-          child: new Text(entry.value.bytesToAsciiString())
-      ));
-
-      allRows.add(Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: firstRow,
-      ));
-
-      List<Widget> secondRow = List.empty(growable: true);
-      secondRow.add(new SizedBox(width: 200,));
-
-      secondRow.addAll(entry.value.bytes16ToString().map((element) => new SizedBox(
-        width: 140,
-        child: new Text(element),
-      )));
-
-      allRows.add(Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: secondRow,
-      ));
-
-      if (dbc?.signals.isNotEmpty == true) {
-        allRows.add(new Text(dbc!.signals.where((signal) => signal.isInterestingSignal() && signal.comment != 'byte' && signal.comment != 'long').map((signal) => signal.name + ' : ' + signal.getValueFromBitesAsString(entry.value.bits) + (signal.postfixMetric != null ? ' ' + signal.postfixMetric! : '')).join('\n'),));
-      }
-
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: allRows
-      );
-    }).toList());
-
     return ListView(
-      padding: const EdgeInsets.all(8),
-      children: allFramesRows
+      children: framesSorted.map((entry) {
+        Dbc? dbc;
+
+        try {
+          dbc = dbcs.firstWhere((element) => element.canId == entry.key);
+        } catch (e) {}
+
+        entry.value.bytesToString().asMap().entries.forEach((element) {
+          if (!framesBytesChange.containsKey(entry.key)) {
+            framesBytesChange[entry.key] = List<ByteChange>.empty(growable: true);
+          }
+
+          ByteChange byteChange = computeByteChange(entry.value, element.key, entry.value.bytes[element.key]);
+
+          try {
+            ByteChange? lastChange = framesBytesChange[entry.key]![element.key];
+
+            if (lastChange.state != byteChange.state) {
+              framesBytesChange[entry.key]![element.key] = byteChange;
+            }
+          } catch(e) {
+            framesBytesChange[entry.key]!.insert(element.key, byteChange);
+          }
+        });
+
+        List<XyDataSeries<ChartData, num>> series = List.empty(growable: true);
+
+        framesBytesChange[entry.key]!.forEach((e) => {
+          series.add(StepLineSeries<ChartData, num>(
+            animationDuration: 0,
+            name: 'B' + e.index.toString(),
+            dataSource: e.values,
+            xValueMapper: (ChartData values, _) => values.x,
+            yValueMapper: (ChartData values, _) => values.y,
+            width: 1,
+          ))
+        });
+
+        return Center(
+            child: Padding(
+                padding: EdgeInsets.all(8),
+                child: Wrap(
+                    children: [
+                      Column(
+                          children: [
+                            Text(
+                              '0x' + entry.key.toRadixString(16).toUpperCase().padLeft(8, '0') + (dbc != null ? ' [' + dbc.name + ']' : '')
+                                  + ' ' + millisecondsToStringFromNow(entry.value.dateTimeReceived),
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                            ),
+                            Wrap(
+                              children: entry.value.bytesToString().asMap().entries.map((element) {
+                                return getBytesWidget(entry, element);
+                              }).toList(),
+                            ),
+                            Wrap(
+                              children: entry.value.bytes16ToString().asMap().entries.map((element) {
+                                return getLongsWidget(element);
+                              }).toList(),
+                            ),
+                            TextButton(onPressed: () => {
+                              framesBytesChange[entry.key]!.forEach((e) => {
+                                e.values.clear() 
+                              })
+                            }, child: Text('Clear chart')),
+                            ToggleButtons(
+                              children: <Widget>[
+                                const Text('Chart'),
+                              ],
+                              onPressed: (int index) {
+                                setState(() {
+                                  framesChartEnable[entry.key] = !framesChartEnable[entry.key]!;
+                                });
+                              },
+                              isSelected: [framesChartEnable[entry.key] ?? false],
+                            ),
+                            framesChartEnable[entry.key] == true ? SizedBox(
+                              width: 500,
+                              child: SfCartesianChart(
+                                plotAreaBorderWidth: 0,
+                                title: ChartTitle(
+                                    text: 'Bytes',
+                                    textStyle: TextStyle(fontSize: 17.0,fontWeight: FontWeight.bold)
+                                ),
+                                legend: Legend(isVisible: true, overflowMode: LegendItemOverflowMode.wrap),
+                                primaryYAxis: NumericAxis(
+                                  labelFormat: '{value}',
+                                  axisLine: const AxisLine(width: 0),
+                                  minimum: 0,
+                                  maximum: 255,
+                                ),
+                                series: series,
+                                tooltipBehavior: TooltipBehavior(enable: true),
+                              ),
+                            ) : SizedBox(),
+                          ]),
+                      dbc?.signals.isNotEmpty == true ?
+                      Text('Signals :\n\n' + dbc!.signals.where((signal) => signal.isInterestingSignal() && signal.comment != 'byte' && signal.comment != 'long').map((signal) => signal.name + ' : ' + signal.getValueFromBitesAsString(entry.value.bits) + (signal.postfixMetric != null ? ' ' + signal.postfixMetric! : '')).join('\n'),)
+                          : SizedBox(),
+                    ])
+            )
+        );
+      }).toList(),
+    );
+  }
+
+  Widget getBytesWidget(MapEntry<int, CanFrame> entry, MapEntry<int, String> element) {
+    ByteChange byteChange = framesBytesChange[entry.key]![element.key];
+
+    return Padding(
+        padding: EdgeInsets.all(8),
+        child: Column(
+            children: [
+              Text(
+                'B' + element.key.toString(),
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text(
+                element.value
+                    + '\n' + millisecondsToStringFromNow(byteChange.date),
+                style: TextStyle(
+                    backgroundColor: byteChange.state == FrameByteState.CHANGED ? Colors.red : Colors.transparent,
+                    color: byteChange.state == FrameByteState.CHANGED ? Colors.white : byteChange.state == FrameByteState.OLD ? Colors.grey : Colors.black
+                ),
+              )
+            ]
+        )
+    );
+  }
+
+  Widget getLongsWidget(MapEntry<int, String> element) {
+    return Padding(
+        padding: EdgeInsets.all(8),
+        child: Column(
+            children: [
+              Text(
+                'L' + element.key.toString(),
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text(element.value)
+            ]
+        )
     );
   }
 }
@@ -231,10 +234,32 @@ enum FrameByteState {
   OLD
 }
 
-class ByteChange {
-  final DateTime date = DateTime.now();
-  FrameByteState state;
-  final int value;
+class ChartData {
+  ChartData(this.x, this.y);
+  final int x;
+  final int y;
+}
 
-  ByteChange(this.state, this.value);
+class ByteChange {
+  final index;
+  DateTime date = DateTime.now();
+  FrameByteState state;
+  int value;
+  List<ChartData> values = List.empty(growable: true);
+
+  ByteChange(this.index, this.state, this.value) {
+    values.add(ChartData(date.millisecondsSinceEpoch, value));
+  }
+
+  void change(int newValue) {
+    date = DateTime.now();
+    value = newValue;
+    state = FrameByteState.CHANGED;
+
+    if (values.length >= 300) {
+      values.clear();
+    }
+
+    values.add(ChartData(date.millisecondsSinceEpoch, value));
+  }
 }

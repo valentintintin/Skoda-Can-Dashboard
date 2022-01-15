@@ -29,9 +29,10 @@ dependencies:
   bit_array: any
   flutter_libserialport:
     git: https://github.com/p30arena/flutter_libserialport
-  flutter_svg: ^0.22.0
+  flutter_svg: ^0.23.0+1
   intl: ^0.17.0
   flutter_dotenv: ^5.0.2
+  path_provider: ^2.0.6
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -79,3 +80,8 @@ flutter:
     - assets/icons/
     - assets/images/
     - .env
+    - .env.car
+    - start.sh
+    - start_dev.sh
+    - set_date.sh
+    - dashcam/

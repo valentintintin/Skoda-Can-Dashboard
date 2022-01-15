@@ -29,7 +29,7 @@ class _AsciiDbcSignalVisualisationWidgetState extends State<AsciiDbcSignalVisual
   @override
   void initState() {
     super.initState();
-    serialListening = streamSerial.listen((event) {
+    serialListening = streamFrame.listen((event) {
       if (event.canId == dbc.canId) {
         if (value.length >= 40) {
           value = '';
@@ -51,7 +51,7 @@ class _AsciiDbcSignalVisualisationWidgetState extends State<AsciiDbcSignalVisual
   Widget build(BuildContext context) {
     return Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget> [
+        children: [
           Text(dbcSignal.name + ' ASCII\n[' + dbc.name + ' 0x' + dbc.canId.toRadixString(16).padLeft(8, '0').toUpperCase() + ']', style: TextStyle(
               fontSize: 17.0,fontWeight: FontWeight.bold, color: Colors.orange)),
           Text(value, style: TextStyle(

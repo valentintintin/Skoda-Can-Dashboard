@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:skoda_can_dashboard/model/can_frame.dart';
 import 'package:skoda_can_dashboard/model/frames/combi_01_frame.dart';
@@ -20,7 +19,7 @@ class _SpeedWidgetState extends AbstractDashboardWidgetState<SpeedWidget> {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
-      children: <Widget> [
+      children: [
         Text(
           "$value",
           style: TextStyle(

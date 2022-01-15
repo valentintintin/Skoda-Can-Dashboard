@@ -1,0 +1,1 @@
+./send_dev.sh $1 && ssh pi@$1 /mnt/Data/skoda-dev/start_dev.sh
