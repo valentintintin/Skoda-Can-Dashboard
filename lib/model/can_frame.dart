@@ -70,6 +70,8 @@ class CanFrame extends SimpleCanFrame {
   late BitArray bits;
 
   CanFrame(SimpleCanFrame simpleCanFrame) {
+    dateTimeReceived = simpleCanFrame.dateTimeReceived;
+    
     canId = simpleCanFrame.canId;
     bytes = simpleCanFrame.bytes;
     timestamp = simpleCanFrame.timestamp;

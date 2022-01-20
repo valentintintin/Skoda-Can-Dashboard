@@ -93,6 +93,10 @@ Future<void> initEnv() async {
     saveFrames = true;
     ipServer = '192.168.4.1';
   }
+  
+  if (saveFrames) {
+    gvretSerial.enableSaveData();
+  }
 }
 
 void tryConnect() {
@@ -179,7 +183,9 @@ Future<void> main() async {
       if (snap.hasError) {
         throw Exception(snap.error.toString() + ' : ' + snap.stackTrace.toString());
       }
-      if(snap.hasData) {
+      if(snap.hasData) {        
+        tryConnect();
+
         Timer.periodic(new Duration(seconds: 7), (timer) {
           if (!gvretSerial.isConnected() || !gvretTcp.isConnected()) {
             tryConnect();

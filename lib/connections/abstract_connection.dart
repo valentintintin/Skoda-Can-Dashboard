@@ -10,6 +10,7 @@ abstract class Connection {
   bool isConnected();
 
   void addNewFrame(CanFrame canFrame) {
+    print('Add new canFrame : ' + canFrame.toString());
     streamControllerCanFrame.add(canFrame);
   }
 } 
