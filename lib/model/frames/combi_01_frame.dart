@@ -18,15 +18,13 @@ class Combi01Frame extends CanFrame {
   BooleanSignal tankWarningSignal = BooleanSignal(16);
   BooleanSignal mfaSignal = BooleanSignal(17); // MFA = Multi Function Actuator : logs and stores data for distance, ave. speed, ave.fuel mileage, etc per trip and automattically resets after the car has been off for a certain amount of time
   BooleanSignal actuatorTestSignal = BooleanSignal(18);
-  Signal indicatorErrorLdwSignal = Signal(19, 2); // LDW = Lane Departure Warning
-  BooleanSignal variantUsaSignal = BooleanSignal(21);
   BooleanSignal fieldPressureWarningSignal = BooleanSignal(22);
   BooleanSignal handbrakeSignal = BooleanSignal(23);
   Signal speedDigital = Signal(24, 9);
-  BooleanSignal plaInDisplaySignal = BooleanSignal(33); // PLA ?
+  BooleanSignal plaInDisplaySignal = BooleanSignal(33); // PLA = park assist ?
   BooleanSignal displayErrorNvSignal = BooleanSignal(34); // NV ?
   Signal displayStatusLimiterSignal = Signal(35, 2);
-  Signal speedSignal = Signal(48, 10);
+  Signal speedSignal = Signal(48, 10, factor: 0.32);
   BooleanSignal tachoSignal = BooleanSignal(58);
   BooleanSignal consistencyAccSignal = BooleanSignal(59);
   BooleanSignal displayErrorAccSignal = BooleanSignal(60);

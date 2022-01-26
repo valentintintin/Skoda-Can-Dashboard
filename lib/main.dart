@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:bit_array/bit_array.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -15,6 +16,7 @@ import 'package:skoda_can_dashboard/model/dashcam_params.dart';
 import 'package:skoda_can_dashboard/model/dbc.dart';
 import 'package:skoda_can_dashboard/model/dbc_signal.dart';
 import 'package:skoda_can_dashboard/model/frames/diagnosis_01_frame.dart';
+import 'package:skoda_can_dashboard/model/signal.dart';
 import 'package:skoda_can_dashboard/widgets/pages/dashboard_page_widget.dart';
 import 'package:skoda_can_dashboard/widgets/pages/dashcam_page_widget.dart';
 import 'package:skoda_can_dashboard/widgets/pages/raw_serial_page_widget.dart';
