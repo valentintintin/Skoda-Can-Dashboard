@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:skoda_can_dashboard/model/can_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/combi_01_frame.dart';
+import 'package:skoda_can_dashboard/model/vehicle_state.dart';
 import 'package:skoda_can_dashboard/widgets/dashboard/abstract_dashboard_widget.dart';
 
 class SpeedWidget extends AbstractDashboardWidget {
-  SpeedWidget(streamCanFrame) : super([Combi01Frame], streamCanFrame);
+  SpeedWidget(streamVehicleState) : super(streamVehicleState);
 
   @override
   State<StatefulWidget> createState() {
@@ -41,8 +40,8 @@ class _SpeedWidgetState extends AbstractDashboardWidgetState<SpeedWidget> {
   }
 
   @override
-  void onNewValue(CanFrame frame) {
-    int newValue = (frame as Combi01Frame).speed();
+  void onNewValue(VehicleState vehicleState) {
+    int newValue = vehicleState.driving.speed;
     
     if (newValue != value) {
       setState(() {

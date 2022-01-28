@@ -1,13 +1,11 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:skoda_can_dashboard/model/can_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/diagnosis_01_frame.dart';
+import 'package:skoda_can_dashboard/model/vehicle_state.dart';
 
 import 'abstract_dashboard_widget.dart';
 
 class ClockWidget extends AbstractDashboardWidget {
-  ClockWidget(streamCanFrame) : super([Diagnosis01Frame], streamCanFrame);
+  ClockWidget(streamVehicleState) : super(streamVehicleState);
 
   @override
   State<StatefulWidget> createState() {
@@ -47,8 +45,8 @@ class _ClockWidgetState extends AbstractDashboardWidgetState<ClockWidget> {
   }
 
   @override
-  void onNewValue(CanFrame frame) {
-    DateTime newValue = (frame as Diagnosis01Frame).dateTime();
+  void onNewValue(VehicleState vehicleState) {
+    DateTime newValue = vehicleState.dateTime;
     
     if (newValue != value) {
       setState(() {

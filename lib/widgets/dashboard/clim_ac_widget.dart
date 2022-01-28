@@ -1,12 +1,10 @@
-
 import 'package:flutter/material.dart';
-import 'package:skoda_can_dashboard/model/can_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/climate_11_frame.dart';
+import 'package:skoda_can_dashboard/model/vehicle_state.dart';
 
 import 'abstract_dashboard_widget.dart';
 
 class ClimAcWidget extends AbstractDashboardWidget {
-  ClimAcWidget(streamCanFrame) : super([Climate11Frame], streamCanFrame);
+  ClimAcWidget(streamVehicleState) : super(streamVehicleState);
 
   @override
   State<StatefulWidget> createState() {
@@ -35,8 +33,8 @@ class _ClimAcWidgetState extends AbstractDashboardWidgetState<ClimAcWidget> {
   }
 
   @override
-  void onNewValue(CanFrame frame) {
-    bool newValue = (frame as Climate11Frame).isAcActivated();
+  void onNewValue(VehicleState vehicleState) {
+    bool newValue = vehicleState.ventilation.airConditionner;
     
     if (newValue != value) {
       setState(() {

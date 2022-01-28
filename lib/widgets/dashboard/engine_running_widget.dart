@@ -1,12 +1,10 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:skoda_can_dashboard/model/can_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/motor_14_frame.dart';
+import 'package:skoda_can_dashboard/model/vehicle_state.dart';
 import 'package:skoda_can_dashboard/widgets/dashboard/abstract_dashboard_widget.dart';
 
 class EngineRunningWidget extends AbstractDashboardWidget {
-  EngineRunningWidget(streamCanFrame) : super([Motor14Frame], streamCanFrame);
+  EngineRunningWidget(streamVehicleState) : super(streamVehicleState);
 
   @override
   State<StatefulWidget> createState() {
@@ -26,8 +24,8 @@ class _EngineRunningWidgetState extends AbstractDashboardWidgetState<EngineRunni
   }
 
   @override
-  void onNewValue(CanFrame frame) {
-    bool newValue = (frame as Motor14Frame).isEngineRunning();
+  void onNewValue(VehicleState vehicleState) {
+    bool newValue = vehicleState.driving.engineRunning;
     
     if (newValue != value) {
       setState(() {

@@ -1,13 +1,10 @@
-
 import 'package:flutter/material.dart';
-import 'package:skoda_can_dashboard/model/can_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/diagnosis_01_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/station_wagon_02_frame.dart';
+import 'package:skoda_can_dashboard/model/vehicle_state.dart';
 
 import 'abstract_dashboard_widget.dart';
 
 class KilometersWidget extends AbstractDashboardWidget {
-  KilometersWidget(streamCanFrame) : super([StationWagon02Frame, Diagnosis01Frame], streamCanFrame);
+  KilometersWidget(streamVehicleState) : super(streamVehicleState);
 
   @override
   State<StatefulWidget> createState() {
@@ -31,14 +28,8 @@ class _KilometersWidgetState extends AbstractDashboardWidgetState<KilometersWidg
   }
 
   @override
-  void onNewValue(CanFrame frame) {
-    int newValue = value;
-    
-    if (frame is StationWagon02Frame) {
-      newValue = frame.kilometer();
-    } else if (frame is Diagnosis01Frame) {
-      newValue = frame.kilometer();
-    }
+  void onNewValue(VehicleState vehicleState) {
+    int newValue = vehicleState.kilometer;
     
     if (newValue > value) {
       setState(() {

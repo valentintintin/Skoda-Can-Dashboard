@@ -1,12 +1,10 @@
-
 import 'package:flutter/material.dart';
-import 'package:skoda_can_dashboard/model/can_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/wba_03_frame.dart';
+import 'package:skoda_can_dashboard/model/vehicle_state.dart';
 
 import 'abstract_dashboard_widget.dart';
 
 class GearboxWidget extends AbstractDashboardWidget {
-  GearboxWidget(streamCanFrame) : super([Wba03Frame], streamCanFrame);
+  GearboxWidget(streamVehicleState) : super(streamVehicleState);
 
   @override
   State<StatefulWidget> createState() {
@@ -30,10 +28,8 @@ class _GearboxWidgetState extends AbstractDashboardWidgetState<GearboxWidget> {
   }
 
   @override
-  void onNewValue(CanFrame frame) {
-    Wba03Frame wbaFrame = frame as Wba03Frame;
-    
-    String newValue = wbaFrame.drivingMode() + wbaFrame.gear();
+  void onNewValue(VehicleState vehicleState) {
+    String newValue = vehicleState.driving.gear.mode + vehicleState.driving.gear.level;
     
     if (newValue != value) {
       setState(() {

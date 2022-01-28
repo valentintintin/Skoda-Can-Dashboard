@@ -1,11 +1,9 @@
-
 import 'package:flutter/material.dart';
-import 'package:skoda_can_dashboard/model/can_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/pedal_frame.dart';
+import 'package:skoda_can_dashboard/model/vehicle_state.dart';
 import 'package:skoda_can_dashboard/widgets/dashboard/abstract_dashboard_widget.dart';
 
 class PedalThrottleWidget extends AbstractDashboardWidget {
-  PedalThrottleWidget(streamCanFrame) : super([PedalFrame], streamCanFrame);
+  PedalThrottleWidget(streamVehicleState) : super(streamVehicleState);
 
   @override
   State<StatefulWidget> createState() {
@@ -29,8 +27,8 @@ class _PedalThrottleWidgetState extends AbstractDashboardWidgetState<PedalThrott
   }
 
   @override
-  void onNewValue(CanFrame frame) {
-    String newValue = (frame as PedalFrame).throttlePedalIntensity().toString();
+  void onNewValue(VehicleState vehicleState) {
+    String newValue = vehicleState.driving.throttlePedalIntensity.toString();
     
     if (newValue != value) {
       setState(() {

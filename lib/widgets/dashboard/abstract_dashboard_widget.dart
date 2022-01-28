@@ -1,31 +1,30 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:skoda_can_dashboard/model/can_frame.dart';
+import 'package:skoda_can_dashboard/model/vehicle_state.dart';
 
 abstract class AbstractDashboardWidget extends StatefulWidget {
-  final List<Type> typesFrames;
-  final Stream<CanFrame> streamCanFrame;
+  final Stream<VehicleState> streamVehicleState;
   
-  AbstractDashboardWidget(this.typesFrames, this.streamCanFrame);
+  AbstractDashboardWidget(this.streamVehicleState);
 }
 
 abstract class AbstractDashboardWidgetState<T extends AbstractDashboardWidget> extends State<T> {
-  late StreamSubscription<CanFrame> _subscriptionCanFrame;
+  late StreamSubscription<VehicleState> _subscriptionVehicleState;
   
   @override
   void initState() {
     super.initState();
-    _subscriptionCanFrame = widget.streamCanFrame.asBroadcastStream().where((frame) => widget.typesFrames.contains(frame.runtimeType)).listen((frame) {
-      onNewValue(frame);
+    _subscriptionVehicleState = widget.streamVehicleState.asBroadcastStream().listen((vehicleState) {
+      onNewValue(vehicleState);
     });
   }
   
   @override
   void dispose() {
-    _subscriptionCanFrame.cancel();
+    _subscriptionVehicleState.cancel();
     super.dispose();
   }
   
-  void onNewValue(CanFrame frame);
+  void onNewValue(VehicleState vehicleState);
 }

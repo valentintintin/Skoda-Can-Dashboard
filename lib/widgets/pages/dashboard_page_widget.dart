@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:skoda_can_dashboard/main.dart';
-import 'package:skoda_can_dashboard/model/frames/blinkmodi_02_frame.dart';
 import 'package:skoda_can_dashboard/widgets/dashboard/acc_distance_widget.dart';
 import 'package:skoda_can_dashboard/widgets/dashboard/acc_speed_widget.dart';
 import 'package:skoda_can_dashboard/widgets/dashboard/brake_widget.dart';
@@ -45,7 +44,7 @@ class DashboardPage extends StatelessWidget {
                                       ),
                                       Padding(
                                         padding: const EdgeInsets.all(8.0),
-                                        child: ClockWidget(streamFrame),
+                                        child: ClockWidget(streamVehicleState),
                                       ),
                                     ],
                                   ),
@@ -54,11 +53,11 @@ class DashboardPage extends StatelessWidget {
                                       children: [
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
-                                          child: EngineRunningWidget(streamFrame),
+                                          child: EngineRunningWidget(streamVehicleState),
                                         ),
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
-                                          child: BrakeWidget(streamFrame),
+                                          child: BrakeWidget(streamVehicleState),
                                         )
                                       ]
                                   ),
@@ -66,19 +65,19 @@ class DashboardPage extends StatelessWidget {
                                       children: [
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
-                                          child: EspYawWidget(streamFrame),
+                                          child: EspYawWidget(streamVehicleState),
                                         ),
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
-                                          child: EspGravitWidget(streamFrame),
+                                          child: EspGravitWidget(streamVehicleState),
                                         ),
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
-                                          child: PedalThrottleWidget(streamFrame),
+                                          child: PedalThrottleWidget(streamVehicleState),
                                         ),
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
-                                          child: PedalBrakeWidget(streamFrame),
+                                          child: PedalBrakeWidget(streamVehicleState),
                                         ),
                                       ]
                                   ),
@@ -86,21 +85,21 @@ class DashboardPage extends StatelessWidget {
                                       children: [
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
-                                          child: TemperatureOutsideWidget(streamFrame),
+                                          child: TemperatureOutsideWidget(streamVehicleState),
                                         ),
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
-                                          child: ClimSpeedWidget(streamFrame),
+                                          child: ClimSpeedWidget(streamVehicleState),
                                         ),
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
-                                          child: ClimAcWidget(streamFrame),
+                                          child: ClimAcWidget(streamVehicleState),
                                         ),
                                       ]
                                   ),
                                   Padding(
                                     padding: const EdgeInsets.all(8.0),
-                                    child: AccSpeedWidget(streamFrame),
+                                    child: AccSpeedWidget(streamVehicleState),
                                   )
                                 ]
                             ),
@@ -110,15 +109,15 @@ class DashboardPage extends StatelessWidget {
                                       children: [
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
-                                          child: TurnIndicatorWidget(streamFrame, TurnIndicatorDirection.left),
+                                          child: TurnIndicatorWidget(streamVehicleState, TurnIndicatorDirection.left),
                                         ),
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
-                                          child: GearboxWidget(streamFrame),
+                                          child: GearboxWidget(streamVehicleState),
                                         ),
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
-                                          child: TurnIndicatorWidget(streamFrame, TurnIndicatorDirection.right),
+                                          child: TurnIndicatorWidget(streamVehicleState, TurnIndicatorDirection.right),
                                         ),
                                       ]
                                   ),
@@ -126,21 +125,21 @@ class DashboardPage extends StatelessWidget {
                                       children: [
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
-                                          child: RpmGaugeWidget(streamFrame),
+                                          child: RpmGaugeWidget(streamVehicleState),
                                         ),
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
-                                          child: SpeedWidget(streamFrame),
+                                          child: SpeedWidget(streamVehicleState),
                                         ),
                                       ]
                                   ),
                                   Padding(
                                     padding: const EdgeInsets.all(8.0),
-                                    child: GazoilWidget(streamFrame),
+                                    child: GazoilWidget(streamVehicleState),
                                   ),
                                   Padding(
                                     padding: const EdgeInsets.all(8.0),
-                                    child: KilometersWidget(streamFrame),
+                                    child: KilometersWidget(streamVehicleState),
                                   ),
                                 ]
                             ),
@@ -164,11 +163,11 @@ class DashboardPage extends StatelessWidget {
                       ),
                       Padding(
                         padding: const EdgeInsets.all(8.0),
-                        child: AccDistanceWidget(streamFrame),
+                        child: AccDistanceWidget(streamVehicleState),
                       ),
                       Padding(
                         padding: const EdgeInsets.all(8.0),
-                        child: EventWidget(streamFrame),
+                        child: EventWidget(streamVehicleState),
                       ),
                     ]
                 )

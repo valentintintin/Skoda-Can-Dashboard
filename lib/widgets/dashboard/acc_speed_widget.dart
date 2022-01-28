@@ -1,13 +1,11 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:skoda_can_dashboard/model/can_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/acc_02_frame.dart';
+import 'package:skoda_can_dashboard/model/vehicle_state.dart';
 
 import 'abstract_dashboard_widget.dart';
 
 class AccSpeedWidget extends AbstractDashboardWidget {
-  AccSpeedWidget(streamCanFrame) : super([Acc02Frame], streamCanFrame);
+  AccSpeedWidget(streamVehicleState) : super(streamVehicleState);
 
   @override
   State<StatefulWidget> createState() {
@@ -53,11 +51,9 @@ class _AccSpeedWidgetState extends AbstractDashboardWidgetState<AccSpeedWidget> 
   }
 
   @override
-  void onNewValue(CanFrame frame) {
-    Acc02Frame accFrame = frame as Acc02Frame;
-    
-    bool newEnabled = accFrame.isSpeedEnabled();
-    int newValue = accFrame.desiredSpeed();
+  void onNewValue(VehicleState vehicleState) {
+    bool newEnabled = vehicleState.adaptiveCruiseControl.active;
+    int newValue = vehicleState.adaptiveCruiseControl.desiredSpeed;
     
     if (newValue != value || newEnabled != enabled) {
       setState(() {

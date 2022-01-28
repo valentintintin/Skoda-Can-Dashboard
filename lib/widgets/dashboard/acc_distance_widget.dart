@@ -1,12 +1,11 @@
 
 import 'package:flutter/material.dart';
-import 'package:skoda_can_dashboard/model/can_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/acc_02_frame.dart';
+import 'package:skoda_can_dashboard/model/vehicle_state.dart';
 
 import 'abstract_dashboard_widget.dart';
 
 class AccDistanceWidget extends AbstractDashboardWidget {
-  AccDistanceWidget(streamCanFrame) : super([Acc02Frame], streamCanFrame);
+  AccDistanceWidget(streamVehicleState) : super(streamVehicleState);
 
   @override
   State<StatefulWidget> createState() {
@@ -67,11 +66,9 @@ class _AccDistanceWidgetState extends AbstractDashboardWidgetState<AccDistanceWi
   }
 
   @override
-  void onNewValue(CanFrame frame) {
-    Acc02Frame accFrame = frame as Acc02Frame;
-    
-    bool newHasObject = accFrame.isObjectDetected();
-    int newValue = accFrame.distanceObject(); 
+  void onNewValue(VehicleState vehicleState) {
+    bool newHasObject = vehicleState.adaptiveCruiseControl.objectDetected;
+    int newValue = vehicleState.adaptiveCruiseControl.objectDistance; 
     
     if (newValue != value || newHasObject != hasObject) {
       setState(() {

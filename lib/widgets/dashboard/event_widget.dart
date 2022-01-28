@@ -1,23 +1,12 @@
-
 import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:skoda_can_dashboard/model/can_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/acc_02_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/climate_11_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/climatronic_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/combi_01_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/diagnosis_01_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/esp_02_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/gateway_72_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/motor_14_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/station_wagon_02_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/wba_03_frame.dart';
+import 'package:skoda_can_dashboard/model/vehicle_state.dart';
 import 'package:skoda_can_dashboard/widgets/dashboard/abstract_dashboard_widget.dart';
 
 class EventWidget extends AbstractDashboardWidget {
-  EventWidget(streamCanFrame) : super([Esp02Frame, Acc02Frame, Climate11Frame, ClimatronicFrame, Gateway72Frame, Diagnosis01Frame, StationWagon02Frame, Wba03Frame, Motor14Frame, Combi01Frame], streamCanFrame);
+  EventWidget(streamVehicleState) : super(streamVehicleState);
 
   @override
   State<StatefulWidget> createState() => _EventWidgetState();
@@ -60,7 +49,7 @@ class _EventWidgetState extends AbstractDashboardWidgetState<EventWidget> {
   }
 
   @override
-  void onNewValue(CanFrame frame) {
+  void onNewValue(VehicleState vehicleState) {
     bool shouldRefresh = false;
 
     bool newValueBrake = valueBrake;
@@ -77,31 +66,19 @@ class _EventWidgetState extends AbstractDashboardWidgetState<EventWidget> {
     int newValueSpeed = valueSpeed;
     double newValueTransverseAcceleration = valueTransverseAcceleration;
 
-    if (frame is Motor14Frame) {
-      newValueBrake = frame.isBraking();
-      newValueEngine = frame.isEngineRunning();
-    } else if (frame is Combi01Frame) {
-      newValueHandBrake = frame.isHandbrakeEngaged();
-      newValueSpeed = frame.speed();
-    } else if (frame is Wba03Frame) {
-      newValueGearbox = frame.gearMode();
-    } else if (frame is StationWagon02Frame) {
-      newValueContentTank = frame.contentTank();
-      newValueKilometer = frame.kilometer();
-    } else if (frame is Diagnosis01Frame) {
-      newValueKilometer = frame.kilometer();
-    } else if (frame is Gateway72Frame) {
-      newTemperatureOutside = frame.temperatureOutside();
-    } else if (frame is ClimatronicFrame) {
-      newValueClimSpeed = frame.speed();
-    } else if (frame is Climate11Frame) {
-      newValueClimAc = frame.isAcActivated();
-    } else if (frame is Acc02Frame) {
-      newValueAccEnabled = frame.isSpeedEnabled();
-      newValueAccSpeed = frame.desiredSpeed();
-    } else if (frame is Esp02Frame) {
-      newValueTransverseAcceleration = frame.transverseAcceleration().abs();
-    }
+    newValueBrake = vehicleState.driving.brake.braking;
+    newValueEngine = vehicleState.driving.engineRunning;
+    newValueHandBrake = vehicleState.driving.brake.handbrake;
+    newValueSpeed = vehicleState.driving.speed;
+    newValueGearbox = vehicleState.driving.gear.mode;
+    newValueContentTank = vehicleState.tank.currentCapacity;
+    newValueKilometer = vehicleState.kilometer;
+    newTemperatureOutside = vehicleState.sensors.temperatureOutside;
+    newValueClimSpeed = vehicleState.ventilation.intensity;
+    newValueClimAc = vehicleState.ventilation.airConditionner;
+    newValueAccEnabled = vehicleState.adaptiveCruiseControl.active;
+    newValueAccSpeed = vehicleState.adaptiveCruiseControl.desiredSpeed;
+    newValueTransverseAcceleration = vehicleState.sensors.transverseAcceleration.abs();
 
     if (newValueBrake != valueBrake) {
       valueBrake = newValueBrake;

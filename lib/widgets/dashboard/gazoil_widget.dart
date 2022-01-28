@@ -1,14 +1,11 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:skoda_can_dashboard/model/can_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/combi_01_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/station_wagon_02_frame.dart';
+import 'package:skoda_can_dashboard/model/vehicle_state.dart';
 
 import 'abstract_dashboard_widget.dart';
 
 class GazoilWidget extends AbstractDashboardWidget {
-  GazoilWidget(streamCanFrame) : super([StationWagon02Frame, Combi01Frame], streamCanFrame);
+  GazoilWidget(streamVehicleState) : super(streamVehicleState);
 
   @override
   State<StatefulWidget> createState() {
@@ -48,15 +45,9 @@ class _GazoilWidgetState extends AbstractDashboardWidgetState<GazoilWidget> {
   }
 
   @override
-  void onNewValue(CanFrame frame) {
-    int newValue = value;
-    bool newEmptySoon = emptySoon;
-    
-    if (frame is StationWagon02Frame) {
-      newValue = frame.contentTank();
-    } else if (frame is Combi01Frame) {
-      newEmptySoon = newValue == 0 || frame.isTankEmptySoon();
-    }
+  void onNewValue(VehicleState vehicleState) {
+    int newValue = vehicleState.tank.currentCapacity;
+    bool newEmptySoon = newValue == 0 || vehicleState.tank.low;
     
     if (newValue != value || newEmptySoon != emptySoon) {
       setState(() {

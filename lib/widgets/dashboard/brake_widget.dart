@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:skoda_can_dashboard/model/can_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/combi_01_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/motor_14_frame.dart';
+import 'package:skoda_can_dashboard/model/vehicle_state.dart';
 import 'package:skoda_can_dashboard/widgets/dashboard/abstract_dashboard_widget.dart';
 
 class BrakeWidget extends AbstractDashboardWidget {
-  BrakeWidget(streamCanFrame) : super([Motor14Frame, Combi01Frame], streamCanFrame);
+  BrakeWidget(streamVehicleState) : super(streamVehicleState);
 
   @override
   State<StatefulWidget> createState() {
@@ -28,15 +26,9 @@ class _BrakeWidgetState extends AbstractDashboardWidgetState<BrakeWidget> {
   }
 
   @override
-  void onNewValue(CanFrame frame) {
-    bool newValueBrake = valueBrake;
-    bool newValueHandBrake = valueHandBrake;
-    
-    if (frame is Motor14Frame) {
-      newValueBrake = frame.isBraking();
-    } else if (frame is Combi01Frame) {
-      newValueHandBrake = frame.isHandbrakeEngaged();
-    }
+  void onNewValue(VehicleState vehicleState) {
+    bool newValueBrake = vehicleState.driving.brake.braking;
+    bool newValueHandBrake = vehicleState.driving.brake.handbrake;
     
     if (newValueBrake != valueBrake || newValueHandBrake != valueHandBrake) {
       setState(() {

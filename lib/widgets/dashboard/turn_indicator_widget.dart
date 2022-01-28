@@ -1,19 +1,22 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:skoda_can_dashboard/model/can_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/blinkmodi_02_frame.dart';
+import 'package:skoda_can_dashboard/model/vehicle_state.dart';
 import 'package:skoda_can_dashboard/widgets/dashboard/abstract_dashboard_widget.dart';
 
 class TurnIndicatorWidget extends AbstractDashboardWidget {
   final TurnIndicatorDirection direction;
 
-  TurnIndicatorWidget(streamCanFrame, this.direction) : super([Blinkmodi02Frame], streamCanFrame);
+  TurnIndicatorWidget(streamVehicleState, this.direction) : super(streamVehicleState);
 
   @override
   State<StatefulWidget> createState() {
     return _TurnIndicatorWidgetState();
   }
+}
+
+enum TurnIndicatorDirection {
+  left,
+  right
 }
 
 class _TurnIndicatorWidgetState extends AbstractDashboardWidgetState<TurnIndicatorWidget> {
@@ -43,8 +46,8 @@ class _TurnIndicatorWidgetState extends AbstractDashboardWidgetState<TurnIndicat
   }
 
   @override
-  void onNewValue(CanFrame frame) {
-    bool newValue = (frame as Blinkmodi02Frame).isTurnIndicatorActivated(widget.direction);
+  void onNewValue(VehicleState vehicleState) {
+    bool newValue = widget.direction == TurnIndicatorDirection.left ? vehicleState.lights.blinker.blinkerLeft : vehicleState.lights.blinker.blinkerRight;
     
     if (newValue != value) {
       setState(() {

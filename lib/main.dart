@@ -3,20 +3,13 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:bit_array/bit_array.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
-import 'package:skoda_can_dashboard/connections/fake_connection.dart';
-import 'package:skoda_can_dashboard/connections/gvret_serial.dart';
-import 'package:skoda_can_dashboard/connections/gvret_tcp.dart';
-import 'package:skoda_can_dashboard/model/can_frame.dart';
+import 'package:skoda_can_dashboard/client_websocket.dart';
 import 'package:skoda_can_dashboard/model/dashcam_params.dart';
-import 'package:skoda_can_dashboard/model/dbc.dart';
-import 'package:skoda_can_dashboard/model/dbc_signal.dart';
-import 'package:skoda_can_dashboard/model/frames/diagnosis_01_frame.dart';
-import 'package:skoda_can_dashboard/model/signal.dart';
+import 'package:skoda_can_dashboard/model/vehicle_state.dart';
 import 'package:skoda_can_dashboard/widgets/pages/dashboard_page_widget.dart';
 import 'package:skoda_can_dashboard/widgets/pages/dashcam_page_widget.dart';
 import 'package:skoda_can_dashboard/widgets/pages/raw_serial_page_widget.dart';
@@ -42,32 +35,21 @@ import 'package:skoda_can_dashboard/utils.dart';
  - À tester : Kilométrage/litre/RPM/ACC vitesse/ACC activé/Levier de vitesse --> fausses valeures, bug décodage bytes   
  */
 
-bool useFake = false;
-bool useFilter = false;
-bool saveFrames = false;
-bool useDashcam = false;
-String? dashcamParamsFile;
-bool recordDashcam = false;
-bool setDateTime = false;
-String? fakeFile = 'assets/canbus.csv';
-List<String> serialPorts = List.empty();
+// String? dashcamParamsFile;
+// bool useDashcam = false;
+// bool recordDashcam = false;
 String? ipServer = null;
-int portServer = 23;
+int portServer = 8080;
 
-List<Dbc> dbcs = List<Dbc>.empty(growable: true);
-List<Dbc> dbcsTried = List<Dbc>.empty(growable: true);
-
-late Stream<CanFrame> streamFrame;
+late Stream<VehicleState> streamVehicleState;
 late Stream<Image> streamPanelImage;
 late Stream<Image> streamDashCamImage;
-StreamController<CanFrame> streamControllerFrame = StreamController<CanFrame>.broadcast();
+StreamController<VehicleState> streamControllerVehicleState = StreamController<VehicleState>.broadcast();
 StreamController<Image> streamControllerPanelImage = StreamController<Image>.broadcast();
 StreamController<Image> streamControllerDashCamImage = StreamController<Image>.broadcast();
 StreamController<DashcamParams> streamControllerDashCamParams = StreamController<DashcamParams>.broadcast();
 
-FakeConnection fakeConnection = FakeConnection(streamControllerFrame);
-GvretSerial gvretSerial = GvretSerial(streamControllerFrame);
-GvretTcp gvretTcp = GvretTcp(streamControllerFrame);
+ClientWebsocket clientWebsocket = ClientWebsocket(streamControllerVehicleState);
 
 Process? dashcamPythonProgramProcess;
 
@@ -78,134 +60,50 @@ Future<void> initEnv() async {
     print('Take dotenv ' + dotEnvFile);
     await dotenv.load(fileName: dotEnvFile);
 
-    useFake = dotenv.get('useFake') == 'true';
-    useFilter = dotenv.get('useFilter') == 'true';
-    saveFrames = dotenv.get('saveFrames') == 'true';
-    useDashcam = dotenv.get('useDashcam') == 'true';
-    dashcamParamsFile = dotenv.maybeGet('dashcamParamsFile', fallback: 'assets/dashcam_params.json');
-    recordDashcam = dotenv.get('recordDashcam') == 'true';
-    setDateTime = dotenv.get('setDateTime') == 'true';
-    fakeFile = dotenv.maybeGet('fakeFile', fallback: 'assets/canbus.csv');
-    serialPorts = dotenv.get('useSerialPort') == 'true' ? dotenv.get('serialPortDevices').split(',') : serialPorts;
-    ipServer = dotenv.get('useSocket') == 'true' ? dotenv.get('ipServer') : ipServer;
-    portServer = dotenv.get('useSocket') == 'true' ? int.parse(dotenv.get('portServer')) : portServer;
+    // dashcamParamsFile = dotenv.maybeGet('dashcamParamsFile', fallback: 'assets/dashcam_params.json');
+    // recordDashcam = dotenv.get('recordDashcam') == 'true';
+    ipServer = dotenv.get('ipServer');
+    portServer = int.parse(dotenv.get('portServer'));
   } else {
     print('Platform Android, saveFrames = true and ipServer = 192.168.4.1');
     
-    saveFrames = true;
     ipServer = '192.168.4.1';
-  }
-  
-  if (saveFrames) {
-    gvretSerial.enableSaveData();
   }
 }
 
 void tryConnect() {
-  if (gvretSerial.isConnected() || gvretTcp.isConnected()) {
+  if (clientWebsocket.isConnected()) {
     return;
   }
   
-  if (serialPorts.isNotEmpty) {
-    try {
-      gvretSerial.init(serialPorts);
-      return;
-    } catch (e) {
-      print('Serial port error : ' + e.toString());    
-    }
-  }
-
   if (ipServer != null) {
-    try {
-      gvretTcp.init(ipServer!, portServer);
-    } catch (e) {
-      print('TCP error : ' + e.toString());
-    }
+    clientWebsocket.init(ipServer!, portServer, 'vehicle_state');
   }
 }
 
 Future<void> main() async {
   await initEnv();
 
-  streamFrame = streamControllerFrame.stream;
+  streamVehicleState = streamControllerVehicleState.stream;
   streamPanelImage = streamControllerPanelImage.stream;
   streamDashCamImage = streamControllerDashCamImage.stream;
 
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (saveFrames) {
-    String filePathFrames = await getNewFileName('canbus') + '.csv';
-    print('Save frames to : ' + filePathFrames);
-    File fileSave = File(filePathFrames);
+  // await startDashcamImagesServer();
 
-    streamFrame.listen((event) {
-      fileSave.writeAsStringSync(event.toCsv() + '\n', mode: FileMode.writeOnlyAppend);
-    });
-  }
+  tryConnect();
 
-  if (setDateTime) {
-    print('Set datetime enabled');
-    
-    streamFrame.listen((event) async {
-      if (event is Diagnosis01Frame) {
-        int diffDateSeconds = (DateTime.now().millisecondsSinceEpoch - event.dateTime().millisecondsSinceEpoch).abs();
-        if (diffDateSeconds >= 2 * 60 * 1000) {
-          /*
-          visudo
-          pi ALL=(ALL) NOPASSWD:ALL
-           */
-          print('Current date : ' + DateTime.now().toIso8601String() + '    Event date : ' + event.dateTime().toIso8601String() + '   diff seconds : ' + diffDateSeconds.toString());
-          
-          try {
-            await Process.run('./set_date.sh', [
-              event.dateTime().toIso8601String(),
-            ]).then((value) {
-              if (value.stdout != null) {
-                print('Date changed : ' + value.stdout);
-              }
-              
-              if (value.stderr != null && value.stderr.toString().isNotEmpty) {
-                print('Error date changed : ' + value.stderr);
-              }
-            });
-          } catch (e, stacktrace) {
-            print('Error before set date : ' + e.toString() + ' ' +
-                stacktrace.toString());
-          }
-        }
-      }
-    });
-  }
+  Timer.periodic(new Duration(seconds: 3), (timer) {
+    tryConnect();
+  });
 
-  await startDashcamImagesServer();
-
-  runApp(FutureBuilder(
-    future: computeFiles(),
-    builder: (_, snap) {
-      if (snap.hasError) {
-        throw Exception(snap.error.toString() + ' : ' + snap.stackTrace.toString());
-      }
-      if(snap.hasData) {        
-        tryConnect();
-
-        Timer.periodic(new Duration(seconds: 7), (timer) {
-          if (!gvretSerial.isConnected() || !gvretTcp.isConnected()) {
-            tryConnect();
-          } else {
-            useFake = false;
-          }
-        });
-
-        return MaterialApp(
-            title: 'Skoda CAN Dashboard',
-            theme: ThemeData(
-              primarySwatch: Colors.blueGrey,
-            ),
-            home: MyApp()
-        );
-      }
-      return Center(child: CircularProgressIndicator());
-    },
+  runApp(MaterialApp(
+      title: 'Skoda CAN Dashboard',
+      theme: ThemeData(
+        primarySwatch: Colors.blueGrey,
+      ),
+      home: MyApp()
   ));
 }
 
@@ -239,8 +137,8 @@ class _MyAppState extends State<MyApp> {
       nbFrames = 0;
     });
 
-    streamFrame.asBroadcastStream().listen((frame) {
-      dateLastFrameReceived = frame.dateTimeReceived;
+    streamVehicleState.asBroadcastStream().listen((frame) {
+      dateLastFrameReceived = frame.dateTime;
       nbFrames++;
     });
   }
@@ -255,13 +153,13 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     IconData connectionStateIcon;
-    if (gvretSerial.isConnected()) {
+/*    if (gvretSerial.isConnected()) {
       connectionStateIcon = Icons.usb;
-    } else if (gvretTcp.isConnected()) {
+    } else*/ if (clientWebsocket.isConnected()) {
       connectionStateIcon = Icons.network_wifi;
-    } else if (fakeConnection.isConnected()) {
+    } /*else if (fakeConnection.isConnected()) {
       connectionStateIcon = Icons.pattern;
-    } else {
+    } */else {
       connectionStateIcon = Icons.mobiledata_off;
     }
 
@@ -284,24 +182,24 @@ class _MyAppState extends State<MyApp> {
                     Navigator.pop(context);
                   },
                 ),
-                ListTile(
-                  title: const Text('Raw Serial'),
-                  onTap: () {
-                    setState(() {
-                      bodyWidget = RawSerialPage();
-                    });
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  title: const Text('DashCam'),
-                  onTap: () {
-                    setState(() {
-                      bodyWidget = DashcamPage(streamDashCamImage, streamControllerDashCamParams, dashcamParamsFile!);
-                    });
-                    Navigator.pop(context);
-                  },
-                ),
+                // ListTile(
+                //   title: const Text('Raw Serial'),
+                //   onTap: () {
+                //     setState(() {
+                //       bodyWidget = RawSerialPage();
+                //     });
+                //     Navigator.pop(context);
+                //   },
+                // ),
+                // ListTile(
+                //   title: const Text('DashCam'),
+                //   onTap: () {
+                //     setState(() {
+                //       bodyWidget = DashcamPage(streamDashCamImage, streamControllerDashCamParams, dashcamParamsFile!);
+                //     });
+                //     Navigator.pop(context);
+                //   },
+                // ),
                 ListTile(
                   title: const Text('Exit'),
                   onTap: () {
@@ -352,197 +250,58 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-Future<bool> computeFiles() async {
-  List<Dbc> dbcsRead = (jsonDecode(await getStringFromAssets('assets/vw_mqb_2010.json')) as List<dynamic>).map((e) => Dbc.fromJson(e)).toList();
-
-  if (useFilter) {
-    (await getStringFromAssets('assets/ids.csv')).split("\n").forEach((id) {
-      int canId = int.parse(id, radix: 16);
-
-      try {
-        Dbc dbc = dbcsRead.firstWhere((dbc) => dbc.canId == canId);
-        if (dbc.signals.isEmpty == true) {
-          List<DbcSignal> signals = List<DbcSignal>.generate(8, (index) =>
-          new DbcSignal(name: 'Byte ' + index.toString(),
-              label: 'Byte ' + index.toString(),
-              startBit: index * 8,
-              bitLength: 8,
-              isLittleEndian: true,
-              isSigned: false,
-              factor: 1,
-              offset: 0,
-              min: 0,
-              max: 0,
-              dataType: 'int',
-              choking: false,
-              visibility: true,
-              interval: 0,
-              category: 'Test',
-              comment: 'byte',
-              lineInDbc: 0,
-              problems: List.empty(),
-              sourceUnit: null,
-              postfixMetric: null,
-              states: List.empty()), growable: true);
-          List<DbcSignal> signals2 = List<DbcSignal>.generate(4, (index) =>
-          new DbcSignal(name: 'Long ' + index.toString(),
-              label: 'Long ' + index.toString(),
-              startBit: index * 16,
-              bitLength: 16,
-              isLittleEndian: true,
-              isSigned: false,
-              factor: 1,
-              offset: 0,
-              min: 0,
-              max: 0,
-              dataType: 'int',
-              choking: false,
-              visibility: true,
-              interval: 0,
-              category: 'Test',
-              comment: 'long',
-              lineInDbc: 0,
-              problems: List.empty(),
-              sourceUnit: null,
-              postfixMetric: null,
-              states: List.empty()));
-          signals.addAll(signals2);
-          dbc.signals.addAll(signals);
-          dbcsTried.add(dbc);
-        }
-        dbcs.add(dbc);
-      } catch (e) {
-        List<DbcSignal> signals = List<DbcSignal>.generate(8, (index) =>
-        new DbcSignal(name: 'Byte ' + index.toString(),
-            label: 'Byte ' + index.toString(),
-            startBit: index * 8,
-            bitLength: 8,
-            isLittleEndian: true,
-            isSigned: false,
-            factor: 1,
-            offset: 0,
-            min: 0,
-            max: 0,
-            dataType: 'int',
-            choking: false,
-            visibility: true,
-            interval: 0,
-            category: 'Test',
-            comment: 'byte',
-            lineInDbc: 0,
-            problems: List.empty(),
-            sourceUnit: null,
-            postfixMetric: null,
-            states: List.empty()), growable: true);
-        List<DbcSignal> signals2 = List<DbcSignal>.generate(4, (index) =>
-        new DbcSignal(name: 'Long ' + index.toString(),
-            label: 'Long ' + index.toString(),
-            startBit: index * 16,
-            bitLength: 16,
-            isLittleEndian: true,
-            isSigned: false,
-            factor: 1,
-            offset: 0,
-            min: 0,
-            max: 0,
-            dataType: 'int',
-            choking: false,
-            visibility: true,
-            interval: 0,
-            category: 'Test',
-            comment: 'long',
-            lineInDbc: 0,
-            problems: List.empty(),
-            sourceUnit: null,
-            postfixMetric: null,
-            states: List.empty()));
-        signals.addAll(signals2);
-        dbcsTried.add(new Dbc(canId: canId,
-            pgn: 0,
-            name: 'Test',
-            label: 'Test',
-            isExtendedFrame: false,
-            dlc: 0,
-            comment: 'Test',
-            signals: signals));
-      }
-    });
-  } else {
-    dbcs = dbcsRead;
-  }
-
-  dbcs.sort((a, b) => a.name.compareTo(b.name));
-  dbcs.forEach((dbc) {
-    dbc.signals.sort((a, b) => a.name.compareTo(b.name));
-  });
-
-  if (useFake) {
-    await simulateLogs();
-  }
-
-  return true;
-}
-
-Future<void> simulateLogs() async {
-  if (fakeFile == null) {
-    return;
-  }
-
-  await fakeConnection.init(fakeFile!);
-}
-
-Future<void> startDashcamImagesServer() async {
-  print('Serveur image panel on 38500');
-  Future<ServerSocket> serverPanelImage = ServerSocket.bind('127.0.0.1', 38500);
-  serverPanelImage.then((ServerSocket server) {
-    server.listen((Socket socket) {
-      socket.listen((List<int> data) {
-        streamControllerPanelImage.add(Image.memory(Uint8List.fromList(data), gaplessPlayback: true,));
-      });
-    });
-  });
-
-  print('Serveur image on 38501');
-  Future<ServerSocket> serverDashCamImage = ServerSocket.bind('127.0.0.1', 38501);
-  serverDashCamImage.then((ServerSocket server) {
-    server.listen((Socket socket) {
-      streamControllerDashCamParams.stream.listen((params) async {
-        List<int> json = utf8.encode(params.toRawJson());
-        
-        Uint8List length = Uint8List(2);
-        ByteData bytedata = ByteData.view(length.buffer);
-
-        bytedata.setUint8(0, json.length & 0xFF);
-        bytedata.setUint8(1, (json.length & 0xFF00) >> 8);
-
-        List<int> toSend = List.of(length, growable: true);
-        toSend.addAll(json);
-        
-        socket.add(toSend);
-      });
-      
-      socket.listen((List<int> data) {
-        streamControllerDashCamImage.add(Image.memory(Uint8List.fromList(data), gaplessPlayback: true));
-      });
-    });
-  });
-
-  if (useDashcam) {
-    print('Start dashcam/index_cam.py with params ' + (dashcamParamsFile ?? 'null'));
-
-    await Process.run('sudo', ['pkill', 'python3']);
-    
-    try {
-      dashcamPythonProgramProcess = await Process.start(
-          'python3', ['dashcam/index_cam.py', dashcamParamsFile ?? 'params.json', recordDashcam ? '1' : '0'], mode: ProcessStartMode.detachedWithStdio);
-      dashcamPythonProgramProcess!.stderr
-          .transform(utf8.decoder)
-          .forEach((e) {
-        print('Error dashcam python: ' + e);
-      });
-      print('dashcam/index_cam.py started');
-    } catch (e, stacktrace) {
-      print('Error run dashcam python : ' + e.toString() + ' ' + stacktrace.toString());
-    }
-  }
-}
+// Future<void> startDashcamImagesServer() async {
+//   print('Serveur image panel on 38500');
+//   Future<ServerSocket> serverPanelImage = ServerSocket.bind('127.0.0.1', 38500);
+//   serverPanelImage.then((ServerSocket server) {
+//     server.listen((Socket socket) {
+//       socket.listen((List<int> data) {
+//         streamControllerPanelImage.add(Image.memory(Uint8List.fromList(data), gaplessPlayback: true,));
+//       });
+//     });
+//   });
+//
+//   print('Serveur image on 38501');
+//   Future<ServerSocket> serverDashCamImage = ServerSocket.bind('127.0.0.1', 38501);
+//   serverDashCamImage.then((ServerSocket server) {
+//     server.listen((Socket socket) {
+//       streamControllerDashCamParams.stream.listen((params) async {
+//         List<int> json = utf8.encode(params.toRawJson());
+//        
+//         Uint8List length = Uint8List(2);
+//         ByteData bytedata = ByteData.view(length.buffer);
+//
+//         bytedata.setUint8(0, json.length & 0xFF);
+//         bytedata.setUint8(1, (json.length & 0xFF00) >> 8);
+//
+//         List<int> toSend = List.of(length, growable: true);
+//         toSend.addAll(json);
+//        
+//         socket.add(toSend);
+//       });
+//      
+//       socket.listen((List<int> data) {
+//         streamControllerDashCamImage.add(Image.memory(Uint8List.fromList(data), gaplessPlayback: true));
+//       });
+//     });
+//   });
+//
+//   if (useDashcam) {
+//     print('Start dashcam/index_cam.py with params ' + (dashcamParamsFile ?? 'null'));
+//
+//     await Process.run('sudo', ['pkill', 'python3']);
+//    
+//     try {
+//       dashcamPythonProgramProcess = await Process.start(
+//           'python3', ['dashcam/index_cam.py', dashcamParamsFile ?? 'params.json'], mode: ProcessStartMode.detachedWithStdio);
+//       dashcamPythonProgramProcess!.stderr
+//           .transform(utf8.decoder)
+//           .forEach((e) {
+//         print('Error dashcam python: ' + e);
+//       });
+//       print('dashcam/index_cam.py started');
+//     } catch (e, stacktrace) {
+//       print('Error run dashcam python : ' + e.toString() + ' ' + stacktrace.toString());
+//     }
+//   }
+// }

@@ -1,12 +1,9 @@
-
 import 'package:flutter/material.dart';
-import 'package:skoda_can_dashboard/model/can_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/gateway_72_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/station_wagon_02_frame.dart';
+import 'package:skoda_can_dashboard/model/vehicle_state.dart';
 import 'package:skoda_can_dashboard/widgets/dashboard/abstract_dashboard_widget.dart';
 
 class TemperatureOutsideWidget extends AbstractDashboardWidget {
-  TemperatureOutsideWidget(streamCanFrame) : super([Gateway72Frame], streamCanFrame);
+  TemperatureOutsideWidget(streamVehicleState) : super(streamVehicleState);
 
   @override
   State<StatefulWidget> createState() {
@@ -35,14 +32,8 @@ class _TemperatureOutsideWidgetState extends AbstractDashboardWidgetState<Temper
   }
 
   @override
-  void onNewValue(CanFrame frame) {
-    String newValue = value;
-
-    if (frame is Gateway72Frame) {
-      newValue = frame.temperatureOutside().toStringAsFixed(1);
-    } else if (frame is StationWagon02Frame) {
-      newValue = frame.temperatureOutside().toStringAsFixed(1);
-    }
+  void onNewValue(VehicleState vehicleState) {
+    String newValue = vehicleState.sensors.temperatureOutside.toStringAsFixed(1);
     
     if (newValue != value) {
       setState(() {

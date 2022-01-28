@@ -1,12 +1,10 @@
-
 import 'package:flutter/material.dart';
-import 'package:skoda_can_dashboard/model/can_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/engine_04_frame.dart';
+import 'package:skoda_can_dashboard/model/vehicle_state.dart';
 
 import 'abstract_dashboard_widget.dart';
 
 class RpmGaugeWidget extends AbstractDashboardWidget {
-  RpmGaugeWidget(streamCanFrame) : super([Engine04Frame], streamCanFrame);
+  RpmGaugeWidget(streamVehicleState) : super(streamVehicleState);
 
   @override
   State<StatefulWidget> createState() {
@@ -30,8 +28,8 @@ class _RpmGaugeWidgetState extends AbstractDashboardWidgetState<RpmGaugeWidget> 
   }
 
   @override
-  void onNewValue(CanFrame frame) {
-    int newValue = (frame as Engine04Frame).engineSpeed();
+  void onNewValue(VehicleState vehicleState) {
+    int newValue = vehicleState.sensors.engineSpeed;
     
     if (newValue != value) {
       setState(() {

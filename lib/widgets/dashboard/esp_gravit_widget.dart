@@ -1,11 +1,9 @@
-
 import 'package:flutter/material.dart';
-import 'package:skoda_can_dashboard/model/can_frame.dart';
-import 'package:skoda_can_dashboard/model/frames/esp_02_frame.dart';
+import 'package:skoda_can_dashboard/model/vehicle_state.dart';
 import 'package:skoda_can_dashboard/widgets/dashboard/abstract_dashboard_widget.dart';
 
 class EspGravitWidget extends AbstractDashboardWidget {
-  EspGravitWidget(streamCanFrame) : super([Esp02Frame], streamCanFrame);
+  EspGravitWidget(streamVehicleState) : super(streamVehicleState);
 
   @override
   State<StatefulWidget> createState() {
@@ -29,8 +27,8 @@ class _EspGravitWidgetState extends AbstractDashboardWidgetState<EspGravitWidget
   }
 
   @override
-  void onNewValue(CanFrame frame) {
-    String newValue = (frame as Esp02Frame).transverseAcceleration().toStringAsFixed(2);
+  void onNewValue(VehicleState vehicleState) {
+    String newValue = vehicleState.sensors.transverseAcceleration.toStringAsFixed(2);
     
     if (newValue != value) {
       setState(() {
